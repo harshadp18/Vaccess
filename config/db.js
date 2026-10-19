@@ -7,14 +7,14 @@ require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 
 const poolConfig = {
-    user: process.env.DB_USER,
-    host: process.env.DB_HOST,
-    database: process.env.DB_NAME,
-    password: process.env.DB_PASSWORD,
+    user: process.env.DB_USER || 'postgres.lqzxtyehavqwbzskxffa',
+    host: process.env.DB_HOST || 'aws-0-ap-northeast-2.pooler.supabase.com',
+    database: process.env.DB_NAME || 'postgres',
+    password: process.env.DB_PASSWORD || 'VaccessDB2026Q7mP84',
     port: process.env.DB_PORT ? parseInt(process.env.DB_PORT, 10) : 5432,
 };
 
-if (process.env.DB_SSL === 'true' || (process.env.DB_HOST && (process.env.DB_HOST.includes('supabase') || process.env.DB_HOST.includes('amazonaws') || process.env.DB_HOST.includes('pooler')))) {
+if (process.env.DB_SSL === 'true' || (poolConfig.host && (poolConfig.host.includes('supabase') || poolConfig.host.includes('amazonaws') || poolConfig.host.includes('pooler')))) {
     poolConfig.ssl = { rejectUnauthorized: false };
 }
 

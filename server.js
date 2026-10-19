@@ -19,7 +19,7 @@ app.use(express.json());
 
 // Session configuration with database store or fallback
 let sessionStore;
-if ((process.env.DB_HOST || process.env.DB_USER) && process.env.NODE_ENV !== 'test') {
+if (process.env.NODE_ENV !== 'test') {
     try {
         const pgSession = require('connect-pg-simple')(session);
         const pool = require('./config/db');
