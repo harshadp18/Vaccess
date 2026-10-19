@@ -1,103 +1,116 @@
 # vAccess — College Venue Booking & Approval Management System
 
-A modern, responsive, frontend-only college venue booking and administrative approval workflow system built purely with **Vanilla HTML5, CSS3, and modern JavaScript (ES6+)**.
+[![Node.js](https://img.shields.io/badge/Node.js-v18%2B-green.svg)](https://nodejs.org/)
+[![Express.js](https://img.shields.io/badge/Express-4.19.2-blue.svg)](https://expressjs.com/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Supabase-336791.svg)](https://supabase.com/)
+[![Frontend](https://img.shields.io/badge/Frontend-Vanilla%20HTML5%20%2F%20CSS3%20%2F%20ES6-orange.svg)]()
+[![Tests](https://img.shields.io/badge/Tests-16%20Passing-brightgreen.svg)]()
+[![License](https://img.shields.io/badge/License-MIT-purple.svg)]()
+
+> A full-stack, enterprise-grade College Venue Booking and Administrative Approval Governance System built with **Vanilla HTML5, CSS3, modern JavaScript (ES6+)**, a **Node.js/Express backend**, and **PostgreSQL hosted on Supabase**.
 
 ---
 
 ## 🏛️ Project Overview
 
-**vAccess** simplifies how campus community members reserve college infrastructure (auditoriums, seminar halls, labs, conference rooms, sports facilities) and how administrators audit, review, approve, or reject booking requests.
+**vAccess** streamlines how campus community members (students and faculty) discover and reserve campus infrastructure (auditoriums, seminar halls, computer labs, conference rooms, indoor stadiums) and provides college administrators with a robust, auditable approval pipeline with transaction-safe decisions and conflict detection.
 
-### Key Highlights
-- **Two Distinct Interfaces**:
-  - **Student & Faculty Portal**: Browse venues, check availability, complete step-by-step booking reservations, track application status, receive automated notifications.
-  - **Admin Approval Portal**: High-level administrative dashboard, filterable pending queue, comprehensive review panel with approve/reject decision modals, remark auditing, and venue status management.
-- **Strict ER Model Conformance**: Data structures and relationships directly mirror the authoritative College Venue Booking ER Model (`Student`, `Faculty`, `Venue`, `Booking`, `Timeslot`, `AdminApproval`).
-- **Backend-Ready Architecture**: 100% modular JavaScript design with isolated data access layers. A backend developer can transition from `localStorage` mock data to REST or GraphQL APIs simply by replacing helper functions with `fetch()` calls.
-- **Zero Framework Bloat**: No React, Vue, Angular, Bootstrap, or TailwindCSS dependencies. Highly performant, accessible semantic HTML and bespoke CSS design tokens.
+### 🌟 Key Highlights
+- **Two Tailored Portals**:
+  - **Student & Faculty Portal**: Browse campus venues, verify real-time slot availability, submit 4-step reservation requests, track approval lifecycle status, and receive real-time notifications.
+  - **Admin Approval & Governance Portal**: High-level administrative dashboard, urgent pending approval queue, decision modals with mandatory audit remarks, live conflict re-validation, venue status management, and complete student & faculty directories.
+- **Strict ER Model Implementation**: Built directly upon the authoritative College Venue Booking ER Model (`student`, `faculty`, `venue`, `booking`, `timeslot`, `approval`, `admin`, `session`).
+- **PostgreSQL on Supabase**: Live database persistence using transaction isolation, row locking (`FOR UPDATE`), and foreign-key integrity.
+- **Zero Framework Bloat**: Pure semantic HTML5, custom CSS design tokens, and modular ES6 JavaScript with zero React, Vue, or Tailwind dependencies for lightning-fast load times.
+- **Automated Verification**: End-to-end test suite verifying access control, decision state machines, timeslot conflicts, and live notification streams.
 
 ---
 
-## 🚀 Getting Started
+## 🔑 Live Database Accounts & Credentials
 
-### Prerequisites
-Any modern web browser (Google Chrome, Mozilla Firefox, Microsoft Edge, Safari).
+The application is connected directly to PostgreSQL on **Supabase**. The following authenticated accounts are pre-seeded in the database:
 
-### Running Locally
-You can run vAccess directly by serving the project folder with any lightweight HTTP server:
+### 🛡️ Administrators (`admin` table)
+| Admin ID (`a_id`) | Administrator Name | Email Address | Default Password | Role | Permissions |
+| :---: | :--- | :--- | :---: | :---: | :--- |
+| **`1`** | Admin One | `admin1@example.com` | `Admin@123` | `admin` | Full System Access, Booking Approvals, Venue Management |
+| **`2`** | Admin Two | `admin2@example.com` | `Admin@123` | `admin` | Full System Access, Booking Approvals, Venue Management |
+| **`3`** | Administrator | `admin@vaccess.edu` | `Admin@123` | `admin` | Primary System Administrator, Audit Log Review |
 
-#### Option 1: VS Code Live Server
-Right-click `index.html` and choose **"Open with Live Server"**.
+### 👨‍🏫 Faculty Members (`faculty` table)
+| Faculty ID (`fno`) | Faculty Name | Email Address | Department | Contact Number | Default Password |
+| :---: | :--- | :--- | :--- | :---: | :---: |
+| **`F001`** | Dr. Rajesh Deshmukh | `rajesh.deshmukh@example.com` | Computer Engineering | 9876500010 | `Faculty@123` |
+| **`F002`** | Prof. Neha Shah | `neha.shah@example.com` | Information Technology | 9876500011 | `Faculty@123` |
+| **`F003`** | Dr. Amit Joshi | `amit.joshi@example.com` | Electronics Engineering | 9876500012 | `Faculty@123` |
+| **`F004`** | Prof. Sneha Patil | `sneha.patil@example.com` | Computer Engineering | 9876500013 | `Faculty@123` |
+| **`F101`** | Dr. Sarah Jenkins | `sarah.jenkins@vaccess.edu` | Computer Science | 9811223344 | `Faculty@123` |
 
-#### Option 2: Python HTTP Server
+### 🎓 Students (`student` table)
+| Roll No (`rno`) | Student Name | Email Address | Department | Contact Number | Default Password |
+| :---: | :--- | :--- | :--- | :---: | :---: |
+| **`S001`** | Taswi Tawde | `taswi.tawde@example.com` | Computer Science | 1234567890 | `Student@123` |
+| **`S101`** | Alex Mercer | `alex.mercer@vaccess.edu` | Computer Science | 9876543210 | `Student@123` |
+| **`ST001`** | Aarav Sharma | `aarav.sharma@example.com` | Computer Engineering | 9876543210 | `Student@123` |
+| **`ST002`** | Ananya Patil | `ananya.patil@example.com` | Information Technology | 9876543211 | `Student@123` |
+| **`ST003`** | Rohan Mehta | `rohan.mehta@example.com` | Computer Engineering | 9876543212 | `Student@123` |
+| **`ST004`** | Isha Kulkarni | `isha.kulkarni@example.com` | Electronics Engineering | 9876543213 | `Student@123` |
+| **`ST005`** | Vedant Joshi | `vedant.joshi@example.com` | Computer Engineering | 9876543214 | `Student@123` |
+
+> 📖 **Full User Directory & Detailed Permissions**: See [USERS_DIRECTORY.md](USERS_DIRECTORY.md)  
+> 🛠️ **Engineering Report & Change Log**: See [CHANGES_AND_FIXES.md](CHANGES_AND_FIXES.md)
+
+---
+
+## 🚀 Getting Started & Local Setup
+
+### 1. Prerequisites
+- **Node.js** v18.0.0 or higher
+- **npm** v9.0.0 or higher
+- Git
+
+### 2. Clone the Repository
 ```bash
-# In the project root directory:
-python -m http.server 3000
+git clone https://github.com/harshadp18/Vaccess.git
+cd Vaccess
 ```
-Then navigate to: `http://localhost:3000`
 
-#### Option 3: Node.js `npx serve`
+### 3. Install Dependencies
 ```bash
-npx serve .
+npm install
 ```
 
----
-
-## 🔑 Demo Accounts & Mock Credentials
-
-All accounts are pre-seeded in the mock database with initial booking records and venue schedules:
-
-| Role | Name | Email | Password | Identifier | Department |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **Student** | Aarav Mehta | `aarav.mehta@college.edu` | `student123` | Roll No: `S001` | Computer Science |
-| **Faculty** | Dr. Suresh Kumar | `suresh.kumar@college.edu` | `faculty123` | Faculty ID: `F001` | Computer Science |
-| **Admin** | Dr. Vijay Patil | `vijay.patil@college.edu` | `admin123` | Admin ID: `A001` | Administration |
-
-> **Tip:** You can also click the quick-fill credential chips directly on the Login page (`pages/login.html`) or register a new student/faculty account via `pages/register.html`.
-
----
-
-## 📂 Project Structure
-
-```text
-vAccess/
-├── index.html                   # Landing page (hero, features, quick venue preview, CTA)
-├── README.md                    # Project documentation & architecture guide
-├── css/
-│   ├── style.css                # Global design tokens, typography, CSS variables, resets
-│   ├── components.css           # UI components (buttons, badges, inputs, tables, cards, modals)
-│   ├── dashboard.css            # Dashboards, timeslots, stats grid, timeline, step wizard
-│   └── responsive.css           # Mobile breakpoints, tablet adaptivity, responsive navigation
-├── js/
-│   ├── mock-data.js             # Seed data for ER entities (Students, Faculty, Venues, etc.)
-│   ├── utils.js                 # Shared helpers (date/time formatters, ID generators, toasts, dialogs)
-│   ├── auth.js                  # Mock authentication, role checking, session management
-│   ├── venues.js                # Venue queries, filtering, availability checks, timeslot storage
-│   ├── bookings.js              # Booking CRUD, filtering, stats aggregation, requester enrichment
-│   ├── notifications.js         # Automated notifications, unread counts, mark-as-read handlers
-│   ├── admin.js                 # Admin approval/rejection workflows, enriched bookings, audit stats
-│   └── app.js                   # Application bootstrap, sidebar init, active link highlighting
-└── pages/
-    ├── login.html               # Role-based login with demo helper chips
-    ├── register.html            # Registration for Students and Faculty
-    ├── student-dashboard.html   # Student/Faculty dashboard (stats, upcoming events, recent bookings)
-    ├── venues.html              # Interactive campus venue catalog with live filters
-    ├── booking.html             # 4-Step booking wizard (Venue → Slot → Details → Confirmation)
-    ├── my-bookings.html         # User booking history with status filters and cancellation
-    ├── booking-details.html     # Detailed booking inspection with admin feedback & lifecycle timeline
-    ├── notifications.html       # User notification center with read/unread filtering
-    ├── profile.html             # Profile viewer & editor mapped to student/faculty/admin entities
-    ├── admin-dashboard.html     # Administrative control center with urgent pending queue
-    ├── admin-bookings.html      # Administrative booking directory with CSV export & filters
-    ├── admin-booking-details.html # Admin decision panel (Approve / Reject with audit remarks)
-    └── admin-venues.html        # Campus venue inventory & maintenance status manager
+### 4. Configure Environment Variables
+Copy `.env.example` to `.env`:
+```bash
+cp .env.example .env
+```
+Ensure your `.env` contains your Supabase PostgreSQL credentials:
+```env
+PORT=3000
+DB_HOST=aws-0-ap-northeast-2.pooler.supabase.com
+DB_NAME=postgres
+DB_USER=your_db_user
+DB_PASSWORD=your_db_password
+DB_PORT=5432
+SESSION_SECRET=your_secret_key
 ```
 
+### 5. Launch the Application
+```bash
+npm start
+```
+The server will start on: **`http://localhost:3000`**
+
+Open your web browser and navigate to:
+- **Landing Page**: `http://localhost:3000`
+- **Login Portal**: `http://localhost:3000/pages/login.html`
+
 ---
 
-## 🧩 ER Model Alignment
+## 🧩 Relational Database ER Model
 
-vAccess directly implements the relational concepts specified in the college ER Model:
+The database schema strictly implements the normalized College Venue Booking ER architecture:
 
 ```mermaid
 erDiagram
@@ -105,104 +118,202 @@ erDiagram
     FACULTY ||--o{ BOOKING : places
     VENUE ||--o{ BOOKING : reserved_in
     BOOKING ||--|{ TIMESLOT : scheduled_at
-    BOOKING ||--o| ADMIN_APPROVAL : reviewed_by
+    BOOKING ||--o| APPROVAL : decided_by
+    ADMIN ||--o{ APPROVAL : reviews
 
     STUDENT {
-        string rno PK
-        string S_name
-        string ContactNo
-        string S_Email
-        string Dept
+        varchar rno PK
+        varchar s_name
+        varchar contactno
+        varchar s_email
+        varchar dept
+        varchar password_hash
     }
 
     FACULTY {
-        string fno PK
-        string F_name
-        string F_Email
-        string Dept
+        varchar fno PK
+        varchar f_name
+        varchar f_email
+        varchar dept
+        varchar contactno
+        varchar password_hash
     }
 
     VENUE {
-        string V_ID PK
-        string V_type
-        string SubType
-        string Category
-        string V_Status
-        int Capacity
-        string ContactNo
+        int v_id PK
+        varchar v_type
+        varchar subtype
+        varchar category
+        varchar v_status
+        int capacity
+        varchar contactno
     }
 
     BOOKING {
-        string B_ID PK
-        date B_Date
-        string B_Status
-        string Purpose
-        int noOfMembers
-        string rno FK
-        string fno FK
-        string V_ID FK
+        int b_id PK
+        date b_date
+        varchar b_status
+        text purpose
+        int noofmembers
+        date eventdate
+        varchar rno FK
+        varchar fno FK
+        int v_id FK
     }
 
     TIMESLOT {
-        string Slot_ID PK
-        date EventDate
-        time StartTime
-        time EndTime
-        string B_ID FK
+        int slot_id PK
+        date eventdate
+        time starttime
+        time endtime
+        int b_id FK
     }
 
-    ADMIN_APPROVAL {
-        string Ap_ID PK
-        date Ap_Date
-        string Decision
-        string Remark
-        string A_ID FK
-        string B_ID FK
+    APPROVAL {
+        int ap_id PK
+        date ap_date
+        varchar decision
+        text remark
+        int a_id FK
+        int b_id FK
+    }
+
+    ADMIN {
+        int a_id PK
+        varchar a_name
+        varchar a_email
+        varchar password_hash
     }
 ```
 
-### Entity Mapping Details
-1. **`Student` (`rno`, `S_name`, `ContactNo`, `S_Email`, `Dept`)**:
-   Represents student applicants. Can place bookings with roll number as foreign key.
-2. **`Faculty` (`fno`, `F_name`, `F_Email`, `Dept`)**:
-   Represents faculty applicants. Can place bookings with faculty number as foreign key.
-3. **`Venue` (`V_ID`, `V_type`, `SubType`, `Category`, `V_Status`, `Capacity`, `ContactNo`)**:
-   Campus venues with status (`Available`, `Booked`, `Maintenance`).
-4. **`Booking` (`B_ID`, `B_Date`, `B_Status`, `Purpose`, `noOfMembers`, `rno`, `fno`, `V_ID`)**:
-   Represents reservation requests with statuses: `Pending`, `Approved`, `Rejected`, `Cancelled`.
-5. **`Timeslot` (`Slot_ID`, `EventDate`, `StartTime`, `EndTime`, `B_ID`)**:
-   Time and date reservation attached to each booking.
-6. **`AdminApproval` (`Ap_ID`, `Ap_Date`, `A_ID`, `Decision`, `Remark`, `B_ID`)**:
-   Administrative review records containing the decision, administrator ID, and justification remarks.
+---
+
+## 📡 REST API Documentation
+
+### 🔐 Authentication (`/api/auth`)
+| Method | Endpoint | Description | Auth Required |
+| :--- | :--- | :--- | :---: |
+| `POST` | `/api/auth/login` | Multi-role user authentication with bcrypt | No |
+| `POST` | `/api/auth/logout` | Destroys server session & clears cookie | Yes |
+| `GET` | `/api/auth/me` | Fetches active user session & profile | Yes |
+
+### 📅 Bookings & Timeslots (`/api/bookings`)
+| Method | Endpoint | Description | Auth Required |
+| :--- | :--- | :--- | :---: |
+| `POST` | `/api/bookings` | Submits a new booking with slot conflict check | Yes |
+| `GET` | `/api/bookings` | Fetches user bookings or all filterable bookings | Yes |
+| `GET` | `/api/bookings/:id` | Fetches full booking details with requester info | Yes |
+| `POST` | `/api/bookings/:id/cancel` | Cancels a pending or approved booking | Yes |
+
+### 🛡️ Administration & Approvals (`/api/admin`)
+| Method | Endpoint | Description | Auth Required |
+| :--- | :--- | :--- | :---: |
+| `POST` | `/api/bookings/:id/approve` | Approves booking, creates approval audit record | Admin |
+| `POST` | `/api/bookings/:id/reject` | Rejects booking with required audit remark | Admin |
+| `GET` | `/api/admin/bookings` | Fetches all bookings with status & date filters | Admin |
+| `GET` | `/api/admin/dashboard` | Returns aggregated metrics & pending totals | Admin |
+| `GET` | `/api/admin/faculty` | Retrieves complete faculty member directory | Admin |
+| `GET` | `/api/admin/students` | Retrieves complete student directory | Admin |
+
+### 🏛️ Venues & Inventory (`/api/venues`)
+| Method | Endpoint | Description | Auth Required |
+| :--- | :--- | :--- | :---: |
+| `GET` | `/api/venues` | Fetches all venues with capacity and status | No |
+| `GET` | `/api/venues/:id` | Fetches detailed venue information | No |
+| `GET` | `/api/venues/available` | Queries venues available for specific slot | No |
+
+### 🔔 Notifications (`/api/notifications`)
+| Method | Endpoint | Description | Auth Required |
+| :--- | :--- | :--- | :---: |
+| `GET` | `/api/notifications` | Returns live role-filtered notification feed | Yes |
 
 ---
 
-## 🔌 Connecting to a Real Backend
+## 🧪 Automated Testing
 
-Every JavaScript module in `js/` is written with clean function interfaces that isolate state interactions:
+vAccess features a dedicated test suite using Node's built-in test runner (`node:test`):
 
-| File | Current `localStorage` Implementation | Backend Integration Target (`fetch`) |
-| :--- | :--- | :--- |
-| `js/venues.js` | `getVenues()` | `await fetch('/api/venues').then(r => r.json())` |
-| `js/bookings.js` | `createBooking(data)` | `await fetch('/api/bookings', { method: 'POST', body: JSON.stringify(data) })` |
-| `js/admin.js` | `approveBooking(id, remark)` | `await fetch('/api/bookings/' + id + '/approve', { method: 'POST', body: JSON.stringify({ remark }) })` |
-| `js/admin.js` | `rejectBooking(id, remark)` | `await fetch('/api/bookings/' + id + '/reject', { method: 'POST', body: JSON.stringify({ remark }) })` |
-| `js/notifications.js` | `getMyNotifications()` | `await fetch('/api/notifications').then(r => r.json())` |
+```bash
+npm test
+```
+
+### Test Coverage Highlights
+- **Access Control Enforcement**: Verifies that unauthenticated or non-admin requests receive `401 Unauthorized` or `403 Forbidden`.
+- **Atomic Decision Transactions**: Validates that decisions rollback on missing remark, missing ID, or non-pending statuses.
+- **Concurrency & Conflict Detection**: Verifies that timeslot collisions are detected and blocked.
+- **Live Notifications**: Verifies role-based notification filtering for students, faculty, and administrators.
 
 ---
 
-## 🎨 Design System
+## 📂 Project Directory Structure
 
-- **Primary Navy / Blue Palette**:
-  - Primary: `#1e3a8a` / `#2563eb`
-  - Accent / Warnings: `#d97706` (Pending)
-  - Success: `#16a34a` (Approved / Available)
-  - Danger: `#dc2626` (Rejected / Maintenance)
-- **Typography**: Inter / system UI font stack with high contrast and hierarchy.
-- **Accessibility**: ARIA labels, semantic landmark elements (`<aside>`, `<header>`, `<main>`), keyboard-friendly modals.
-- **Responsive**: Fully optimized for mobile screens (≤640px), tablets (≤900px), and desktop layouts.
+```text
+vAccess/
+├── server.js                      # Express server entry point & middleware pipeline
+├── package.json                   # Project metadata and dependencies
+├── .env.example                   # Environment configuration template
+├── README.md                      # Primary project documentation
+├── USERS_DIRECTORY.md             # Authoritative user directory & credentials
+├── CHANGES_AND_FIXES.md           # Engineering report & change changelog
+├── config/
+│   └── db.js                      # PostgreSQL connection pool with Supabase SSL
+├── routes/
+│   ├── admin.js                   # Administrative approvals, rejections, directories
+│   ├── auth.js                    # Multi-role authentication & session handling
+│   ├── bookings.js                # Booking reservation & timeslot management
+│   ├── notifications.js           # Live notification feed derived from bookings
+│   └── venue.js                   # Campus venue directory and availability checks
+├── js/
+│   ├── api.js                     # Centralized client API client with caching
+│   ├── app.js                     # Bootstrap, sidebar initialization, active links
+│   ├── auth.js                    # Role guards (requireLogin, requireAdmin)
+│   ├── bookings.js                # Client booking helpers and statistics
+│   ├── notifications.js           # Client notification rendering and badge counter
+│   ├── utils.js                   # Date formatters, modals, toasts, dialogs
+│   └── venues.js                  # Venue filtering and display helpers
+├── css/
+│   ├── style.css                  # Design tokens, color system, CSS variables
+│   ├── components.css             # Buttons, badges, tables, modals, cards, forms
+│   ├── dashboard.css              # Dashboard layouts, timelines, step wizards
+│   └── responsive.css             # Responsive breakpoints for mobile & tablet
+├── pages/
+│   ├── login.html                 # Multi-role login screen with helper chips
+│   ├── register.html              # Account registration for students & faculty
+│   ├── student-dashboard.html     # Student & faculty dashboard
+│   ├── booking.html               # 4-Step interactive booking wizard
+│   ├── booking-details.html       # Requester booking inspection & timeline
+│   ├── my-bookings.html           # Requester booking history with cancellation
+│   ├── venues.html                # Campus venue catalog with filters
+│   ├── notifications.html         # Unified notification center (Student/Faculty/Admin)
+│   ├── profile.html               # User profile manager & system stats
+│   ├── admin-dashboard.html       # Administrative control center & pending queue
+│   ├── admin-bookings.html        # Admin booking directory with CSV export
+│   ├── admin-booking-details.html # Admin decision panel (Approve / Reject)
+│   ├── admin-venues.html          # Campus venue inventory & maintenance
+│   ├── admin-students.html        # Student directory with booking records
+│   ├── admin-faculty.html         # Faculty directory with booking records
+│   ├── admin-approvals.html       # Administrative decision audit log
+│   ├── admin-admins.html          # Administrator accounts roster
+│   └── admin-er-model.html        # Interactive ER Model & Database viewer
+└── tests/
+    ├── approval_workflow.test.js  # 14 Approval/Rejection workflow unit tests
+    └── notifications.test.js      # 2 Live notification unit tests
+```
+
+---
+
+## 🎨 Design System & Accessibility
+
+- **Color Tokens**:
+  - Primary Navy: `#0a192f` / `#1e3a8a` / `#2563eb`
+  - Pending Warning: `#d97706`
+  - Approved / Available: `#16a34a`
+  - Rejected / Danger: `#dc2626`
+  - Surface Background: `#f8fafc` / Card Surface: `#ffffff`
+- **Accessibility**: Semantic HTML landmarks (`<nav>`, `<aside>`, `<main>`, `<header>`), accessible ARIA modals, high-contrast typography, and focus ring states.
+- **Responsiveness**: Fluid layout across mobile devices (≤640px), tablets (≤900px), and wide monitors.
 
 ---
 
 ## 📄 License
-Academic and educational use — designed for college facility management.
+This project is licensed under the MIT License — academic and institutional use permitted.

@@ -356,9 +356,9 @@ document.addEventListener('DOMContentLoaded', () => {
 function updateVenueStats() {
   const venues = getVenues();
   el('count-total-venues').textContent = venues.length;
-  el('count-available-venues').textContent = venues.filter(v => v.V_Status === 'Available').length;
+  el('count-available-venues').textContent = venues.filter(v => v.V_Status === 'Available' || v.V_Status === 'Open').length;
   el('count-booked-venues').textContent = venues.filter(v => v.V_Status === 'Booked').length;
-  el('count-maintenance-venues').textContent = venues.filter(v => v.V_Status === 'Maintenance').length;
+  el('count-maintenance-venues').textContent = venues.filter(v => v.V_Status === 'Maintenance' || v.V_Status === 'Under Maintenance').length;
 }
 
 function populateFilters() {
@@ -568,18 +568,24 @@ function handleSaveVenue() {
   applyVenueFilters();
 }
 
-function toggleMaintenance(vId) {
-  const venues = getVenues();
-  const v = venues.find(x => x.V_ID === vId);
-  if (!v) return;
-
-  const newStatus = v.V_Status === 'Maintenance' ? 'Available' : 'Maintenance';
-  v.V_Status = newStatus;
-  localStorage.setItem('va_venues', JSON.stringify(venues));
-
-  toast.info(`${v.V_type} status changed to ${newStatus}`);
-  updateVenueStats();
-  applyVenueFilters();
+async function toggleMaintenance(vId) {
+  try {
+    if (window.vAccessAPI && window.vAccessAPI.toggleVenueMaintenance) {
+      await window.vAccessAPI.toggleVenueMaintenance(vId);
+    } else {
+      const venues = getVenues();
+      const v = venues.find(x => String(x.V_ID) === String(vId));
+      if (v) {
+        v.V_Status = (v.V_Status === 'Maintenance' || v.V_Status === 'Under Maintenance') ? 'Available' : 'Under Maintenance';
+        localStorage.setItem('va_venues', JSON.stringify(venues));
+      }
+    }
+    toast.info(`Venue status updated`);
+    updateVenueStats();
+    applyVenueFilters();
+  } catch (err) {
+    toast.error(err.message || 'Failed to update venue status');
+  }
 }
 </script>
 </body>

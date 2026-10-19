@@ -262,6 +262,17 @@ document.addEventListener('DOMContentLoaded', () => {
   loadFacultyDeptFilters();
   renderFacultyList();
 
+  // Async sync with live backend
+  if (window.vAccessAPI) {
+    Promise.all([
+      window.vAccessAPI.getAdminFaculty ? window.vAccessAPI.getAdminFaculty() : Promise.resolve(),
+      window.vAccessAPI.getAdminBookings ? window.vAccessAPI.getAdminBookings() : Promise.resolve()
+    ]).then(() => {
+      loadFacultyDeptFilters();
+      renderFacultyList();
+    }).catch(e => console.warn('Faculty sync error:', e));
+  }
+
   el('search-faculty').addEventListener('input', renderFacultyList);
   el('filter-faculty-dept').addEventListener('change', renderFacultyList);
   el('btn-reset-filters').addEventListener('click', () => {
@@ -270,7 +281,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderFacultyList();
   });
 
-  el('faculty-form').addEventListener('submit', (e) => {
+  el('faculty-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const editFno = el('faculty-edit-fno').value;
     const name    = el('faculty-name').value.trim();
@@ -279,31 +290,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const dept    = el('faculty-dept').value;
     const pass    = el('faculty-password').value;
 
-    saveFaculty({
+    const payload = {
       fno: editFno || null,
       F_name: name,
       F_Email: email,
       ContactNo: contact,
       Dept: dept,
       password: pass
-    });
+    };
+
+    if (window.vAccessAPI && window.vAccessAPI.saveFaculty) {
+      await window.vAccessAPI.saveFaculty(payload);
+    } else {
+      saveFaculty(payload);
+    }
 
     toast.success(`Faculty member ${editFno ? 'updated' : 'added'} successfully`);
     closeModal('faculty-modal');
     loadFacultyDeptFilters();
     renderFacultyList();
-  });
-
-  el('sidebar-logout').addEventListener('click', (e) => {
-    e.preventDefault();
-    showConfirm({
-      title: 'Log Out',
-      message: 'Sign out of the Admin Portal?',
-      icon: '🚪',
-      confirmText: 'Log Out',
-      confirmClass: 'btn-primary',
-      onConfirm: () => logout()
-    });
   });
 });
 
@@ -398,11 +403,19 @@ function handleDeleteFaculty(fno) {
     icon: '🗑️',
     confirmText: 'Delete Faculty',
     confirmClass: 'btn-danger',
-    onConfirm: () => {
-      deleteFaculty(fno);
-      toast.info(`Faculty member ${fno} deleted.`);
-      loadFacultyDeptFilters();
-      renderFacultyList();
+    onConfirm: async () => {
+      try {
+        if (window.vAccessAPI && window.vAccessAPI.deleteFaculty) {
+          await window.vAccessAPI.deleteFaculty(fno);
+        } else {
+          deleteFaculty(fno);
+        }
+        toast.info(`Faculty member ${fno} deleted.`);
+        loadFacultyDeptFilters();
+        renderFacultyList();
+      } catch (err) {
+        toast.error(err.message || 'Failed to delete faculty');
+      }
     }
   });
 }

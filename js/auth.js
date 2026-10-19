@@ -59,11 +59,20 @@ function mockLogin(email, password, role) {
   email = email.trim().toLowerCase();
 
   if (role === 'admin') {
-    const admins = JSON.parse(localStorage.getItem('va_admins') || '[]');
-    const admin = admins.find(a => a.A_Email.toLowerCase() === email);
+    let admins = JSON.parse(localStorage.getItem('va_admins') || '[]');
+    if (admins.length === 0 && typeof DEFAULT_ADMINS !== 'undefined') {
+      admins = DEFAULT_ADMINS;
+      localStorage.setItem('va_admins', JSON.stringify(admins));
+    }
+    const admin = admins.find(a => (a.A_Email || a.email || '').toLowerCase() === email);
     if (!admin) {
-      if (admins.length === 0) {
-        return { success: false, error: 'No admin accounts exist yet. Please register an Administrator account first.' };
+      if (typeof DEFAULT_ADMINS !== 'undefined') {
+        const def = DEFAULT_ADMINS.find(a => a.A_Email.toLowerCase() === email);
+        if (def) {
+          admins.push(def);
+          localStorage.setItem('va_admins', JSON.stringify(admins));
+          return mockLogin(email, password, role);
+        }
       }
       return { success: false, error: 'No administrator account found with this email address.' };
     }
@@ -72,22 +81,31 @@ function mockLogin(email, password, role) {
     }
     const session = {
       role: 'admin',
-      id: admin.A_ID,
-      name: admin.A_Name,
-      email: admin.A_Email,
+      id: admin.A_ID || admin.id,
+      name: admin.A_Name || admin.name,
+      email: admin.A_Email || admin.email,
       dept: null,
-      A_ID: admin.A_ID,
+      A_ID: admin.A_ID || admin.id,
     };
     setSession(session);
     return { success: true, session };
   }
 
   if (role === 'student') {
-    const students = JSON.parse(localStorage.getItem('va_students') || '[]');
-    const student = students.find(s => s.S_Email.toLowerCase() === email);
+    let students = JSON.parse(localStorage.getItem('va_students') || '[]');
+    if (students.length === 0 && typeof DEFAULT_STUDENTS !== 'undefined') {
+      students = DEFAULT_STUDENTS;
+      localStorage.setItem('va_students', JSON.stringify(students));
+    }
+    const student = students.find(s => (s.S_Email || s.email || '').toLowerCase() === email);
     if (!student) {
-      if (students.length === 0) {
-        return { success: false, error: 'No student accounts found. Please register an account first.' };
+      if (typeof DEFAULT_STUDENTS !== 'undefined') {
+        const def = DEFAULT_STUDENTS.find(s => s.S_Email.toLowerCase() === email);
+        if (def) {
+          students.push(def);
+          localStorage.setItem('va_students', JSON.stringify(students));
+          return mockLogin(email, password, role);
+        }
       }
       return { success: false, error: 'No student account found with this email address.' };
     }
@@ -96,11 +114,11 @@ function mockLogin(email, password, role) {
     }
     const session = {
       role: 'student',
-      id: student.rno,
-      name: student.S_name,
-      email: student.S_Email,
-      dept: student.Dept,
-      contactNo: student.ContactNo,
+      id: student.rno || student.id,
+      name: student.S_name || student.name,
+      email: student.S_Email || student.email,
+      dept: student.Dept || student.dept,
+      contactNo: student.ContactNo || student.contactNo,
       A_ID: null,
     };
     setSession(session);
@@ -108,11 +126,20 @@ function mockLogin(email, password, role) {
   }
 
   if (role === 'faculty') {
-    const faculty = JSON.parse(localStorage.getItem('va_faculty') || '[]');
-    const f = faculty.find(fc => fc.F_Email.toLowerCase() === email);
+    let faculty = JSON.parse(localStorage.getItem('va_faculty') || '[]');
+    if (faculty.length === 0 && typeof DEFAULT_FACULTY !== 'undefined') {
+      faculty = DEFAULT_FACULTY;
+      localStorage.setItem('va_faculty', JSON.stringify(faculty));
+    }
+    const f = faculty.find(fc => (fc.F_Email || fc.email || '').toLowerCase() === email);
     if (!f) {
-      if (faculty.length === 0) {
-        return { success: false, error: 'No faculty accounts found. Please register an account first.' };
+      if (typeof DEFAULT_FACULTY !== 'undefined') {
+        const def = DEFAULT_FACULTY.find(fc => fc.F_Email.toLowerCase() === email);
+        if (def) {
+          faculty.push(def);
+          localStorage.setItem('va_faculty', JSON.stringify(faculty));
+          return mockLogin(email, password, role);
+        }
       }
       return { success: false, error: 'No faculty account found with this email address.' };
     }
@@ -121,11 +148,11 @@ function mockLogin(email, password, role) {
     }
     const session = {
       role: 'faculty',
-      id: f.fno,
-      name: f.F_name,
-      email: f.F_Email,
-      dept: f.Dept,
-      contactNo: f.ContactNo,
+      id: f.fno || f.id,
+      name: f.F_name || f.name,
+      email: f.F_Email || f.email,
+      dept: f.Dept || f.dept,
+      contactNo: f.ContactNo || f.contactNo,
       A_ID: null,
     };
     setSession(session);
@@ -289,9 +316,26 @@ function requireUser(redirectTo) {
 }
 
 /** Logout and redirect cleanly to login page or custom redirect target */
-function logout(redirectTo) {
-  clearSession();
-  const isPagesDir = window.location.pathname.includes('/pages/');
-  const target = redirectTo || (isPagesDir ? 'login.html' : 'pages/login.html');
-  window.location.href = target;
+
+async function logout(redirectTo) {
+  try {
+    await fetch(
+      `${window.API_BASE || 'http://localhost:5000/api'}/auth/logout`,
+      {
+        method: 'POST',
+        credentials: 'include'
+      }
+    );
+  } catch (err) {
+    console.error('Backend logout failed:', err);
+  } finally {
+    clearSession();
+
+    const isPagesDir = window.location.pathname.includes('/pages/');
+    const target = redirectTo || (
+      isPagesDir ? 'login.html' : 'pages/login.html'
+    );
+
+    window.location.href = target;
+  }
 }

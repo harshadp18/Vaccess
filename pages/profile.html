@@ -247,16 +247,105 @@ document.addEventListener('DOMContentLoaded', () => {
   const session = getSession();
   if (!session) return;
 
+  // Role-specific sidebar and topbar configuration
+  if (session.role === 'admin') {
+    const brand = document.querySelector('.sidebar-brand');
+    if (brand) {
+      brand.href = 'admin-dashboard.html';
+      brand.innerHTML = `
+        <div class="sidebar-brand-icon" style="background:var(--color-navy-dark,#0a192f);">🛡️</div>
+        <div>
+          <div class="sidebar-brand-text">vAccess</div>
+          <div class="sidebar-brand-sub" style="color:var(--color-warning);">Admin Portal</div>
+        </div>
+      `;
+    }
+
+    const nav = document.querySelector('.sidebar-nav');
+    if (nav) {
+      nav.innerHTML = `
+        <div class="sidebar-section-label">Administration</div>
+        <ul>
+          <li><a href="admin-dashboard.html"><span class="nav-icon">📊</span> Dashboard</a></li>
+          <li>
+            <a href="admin-bookings.html?status=Pending">
+              <span class="nav-icon">⏳</span> Pending Approvals
+              <span class="badge badge-warning" id="sidebar-pending-badge" style="margin-left:auto;font-size:0.75rem;display:none;">0</span>
+            </a>
+          </li>
+          <li><a href="admin-bookings.html"><span class="nav-icon">📋</span> All Bookings</a></li>
+          <li><a href="admin-venues.html"><span class="nav-icon">🏛️</span> Venues</a></li>
+          <li><a href="admin-students.html"><span class="nav-icon">🎓</span> Students</a></li>
+          <li><a href="admin-faculty.html"><span class="nav-icon">👨‍🏫</span> Faculty</a></li>
+          <li><a href="admin-approvals.html"><span class="nav-icon">✅</span> Approvals Log</a></li>
+          <li><a href="admin-admins.html"><span class="nav-icon">🛡️</span> Administrators</a></li>
+          <li><a href="admin-er-model.html"><span class="nav-icon">📐</span> ER Model & Database</a></li>
+        </ul>
+        <div class="sidebar-section-label">Account</div>
+        <ul>
+          <li>
+            <a href="notifications.html">
+              <span class="nav-icon">🔔</span> Notifications
+              <span class="nav-notif-badge" id="sidebar-notif-badge" style="display:none;"></span>
+            </a>
+          </li>
+          <li><a href="profile.html" class="active"><span class="nav-icon">👤</span> Profile</a></li>
+          <li><a href="#" id="sidebar-logout"><span class="nav-icon">🚪</span> Logout</a></li>
+        </ul>
+      `;
+    }
+
+    const breadcrumb = document.querySelector('.topbar-breadcrumb');
+    if (breadcrumb) {
+      breadcrumb.innerHTML = `
+        <span>Admin</span>
+        <span class="breadcrumb-sep">/</span>
+        <span class="breadcrumb-current">Profile</span>
+      `;
+    }
+
+    const topbarRight = document.querySelector('.topbar-right');
+    if (topbarRight) {
+      topbarRight.innerHTML = `
+        <a href="admin-bookings.html" class="btn btn-sm btn-outline">All Bookings</a>
+        <a href="admin-bookings.html?status=Pending" class="btn btn-sm btn-primary">
+          <span>⏳</span> <span class="topbar-btn-text">Review Approvals</span>
+        </a>
+      `;
+    }
+
+    // Pending approvals badge calculation
+    const pendingCount = (typeof getBookings === 'function') 
+      ? getBookings().filter(b => (b.B_Status || b.b_status) === 'Pending').length 
+      : 0;
+    const pBadge = el('sidebar-pending-badge');
+    if (pBadge && pendingCount > 0) {
+      pBadge.textContent = pendingCount;
+      pBadge.style.display = 'inline-block';
+    }
+
+    if (window.vAccessAPI && window.vAccessAPI.getBookings) {
+      window.vAccessAPI.getBookings().then(bookings => {
+        const livePending = bookings.filter(b => (b.B_Status || b.b_status) === 'Pending').length;
+        const b = el('sidebar-pending-badge');
+        if (b) {
+          b.textContent = livePending;
+          b.style.display = livePending > 0 ? 'inline-block' : 'none';
+        }
+      }).catch(() => {});
+    }
+  }
+
   // Populate Sidebar
-  el('sidebar-name').textContent = session.name;
-  el('sidebar-role').textContent = session.role.charAt(0).toUpperCase() + session.role.slice(1);
-  el('sidebar-avatar').textContent = getInitials(session.name);
+  el('sidebar-name').textContent = session.name || (session.role === 'admin' ? 'Admin' : 'User');
+  el('sidebar-role').textContent = session.role === 'admin' ? 'Administrator' : (session.role.charAt(0).toUpperCase() + session.role.slice(1));
+  el('sidebar-avatar').textContent = session.role === 'admin' ? 'A' : getInitials(session.name);
 
   // Big avatar & card header
-  el('profile-big-avatar').textContent = getInitials(session.name);
+  el('profile-big-avatar').textContent = session.role === 'admin' ? 'A' : getInitials(session.name);
   el('profile-display-name').textContent = session.name;
   el('profile-display-id').textContent = `ID: ${session.id || session.A_ID || '—'}`;
-  el('profile-display-dept').textContent = `Dept: ${session.dept || 'General'}`;
+  el('profile-display-dept').textContent = `Dept: ${session.dept || (session.role === 'admin' ? 'Administration' : 'General')}`;
   el('profile-display-email').textContent = session.email;
   el('profile-role-badge').textContent = session.role.toUpperCase();
 
@@ -281,11 +370,13 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Populate stats
-  const stats = getMyBookingStats();
+  const stats = (session.role === 'admin' && typeof getAllBookingStats === 'function') 
+    ? getAllBookingStats() 
+    : getMyBookingStats();
   el('stat-total').textContent = stats.total;
   el('stat-approved').textContent = stats.approved;
   el('stat-pending').textContent = stats.pending;
-  el('stat-rejected').textContent = stats.rejected + stats.cancelled;
+  el('stat-rejected').textContent = stats.rejected + (stats.cancelled || 0);
 
   // Profile update form submission
   el('profile-form').addEventListener('submit', (e) => {

@@ -416,8 +416,18 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-function loadBookingDetails() {
-  const b = getBookingById(currentBookingId);
+async function loadBookingDetails() {
+  let b = null;
+  if (window.vAccessAPI) {
+    try {
+      b = await window.vAccessAPI.getBookingById(currentBookingId);
+    } catch (e) {
+      console.warn('API getBookingById error:', e.message);
+    }
+  }
+  if (!b) {
+    b = getBookingById(currentBookingId);
+  }
   if (!b) {
     toast.error(`Booking ${currentBookingId} not found`);
     setTimeout(() => window.location.href = 'admin-bookings.html', 1500);
@@ -425,11 +435,11 @@ function loadBookingDetails() {
   }
 
   currentBooking = b;
-  const venue = getVenueById(b.V_ID);
-  const requester = getRequesterInfo(b);
-  const slots = getTimeslotsForBooking(b.B_ID);
-  const slot = slots[0];
-  const approval = getApprovalForBooking(b.B_ID);
+  const venue = b.venue || getVenueById(b.V_ID);
+  const requester = b.requester || getRequesterInfo(b) || { name: 'Unknown', dept: '—', role: 'User', id: '—' };
+  const slots = (b.slots && b.slots.length) ? b.slots : getTimeslotsForBooking(b.B_ID);
+  const slot = (slots && slots[0]) ? slots[0] : { EventDate: b.eventDate, StartTime: b.startTime, EndTime: b.endTime, Slot_ID: b.slot_id };
+  const approval = b.approval || getApprovalForBooking(b.B_ID);
 
   // Header & breadcrumb
   el('breadcrumb-bid').textContent = b.B_ID;
@@ -440,49 +450,49 @@ function loadBookingDetails() {
   // Event & Schedule details
   el('abd-bid').textContent = b.B_ID;
   el('abd-status-text').innerHTML = statusBadge(b.B_Status);
-  el('abd-date').textContent = slot ? formatDate(slot.EventDate) : '—';
-  el('abd-time').textContent = slot ? `${formatTime(slot.StartTime)} – ${formatTime(slot.EndTime)}` : '—';
+  el('abd-date').textContent = slot && slot.EventDate ? formatDate(slot.EventDate) : (b.eventDate ? formatDate(b.eventDate) : '—');
+  el('abd-time').textContent = (slot && slot.StartTime && slot.EndTime) ? `${formatTime(slot.StartTime)} – ${formatTime(slot.EndTime)}` : (b.timeRange || '—');
   el('abd-members').textContent = `${b.noOfMembers || b.NoOfMembers || 0} participants`;
   el('abd-slot-id').textContent = slot ? slot.Slot_ID : '—';
   el('abd-purpose').textContent = b.Purpose || b.B_Purpose || 'No purpose description provided.';
 
   // Venue details
   if (venue) {
-    el('abd-vid').textContent = venue.V_ID;
-    el('abd-vtype').textContent = venue.V_type;
-    el('abd-vsub').textContent = venue.SubType;
-    el('abd-vcat').textContent = venue.Category;
-    el('abd-vcap').textContent = `${venue.Capacity} people`;
-    el('abd-vcontact').textContent = venue.ContactNo || '—';
+    el('abd-vid').textContent = venue.V_ID || venue.v_id || '—';
+    el('abd-vtype').textContent = venue.V_type || venue.v_type || '—';
+    el('abd-vsub').textContent = venue.SubType || venue.subtype || '—';
+    el('abd-vcat').textContent = venue.Category || venue.category || '—';
+    el('abd-vcap').textContent = `${venue.Capacity || venue.capacity || 0} people`;
+    el('abd-vcontact').textContent = venue.ContactNo || venue.contactno || '—';
   }
 
   // Requester details
-  el('abd-req-name').textContent = requester.name;
-  el('abd-req-id').textContent = `ID: ${requester.id}`;
-  el('abd-req-dept').textContent = requester.dept;
-  el('abd-req-email').textContent = requester.email;
-  el('abd-req-phone').textContent = requester.contact || '—';
-  el('abd-req-avatar').textContent = getInitials(requester.name);
-  el('abd-req-type-badge').innerHTML = `<span class="badge badge-primary">${requester.type.toUpperCase()}</span>`;
+  el('abd-req-name').textContent = requester.name || 'Unknown';
+  el('abd-req-id').textContent = `ID: ${requester.id || '—'}`;
+  el('abd-req-dept').textContent = requester.dept || '—';
+  el('abd-req-email').textContent = requester.email || '—';
+  el('abd-req-phone').textContent = requester.contact || requester.contactNo || '—';
+  el('abd-req-avatar').textContent = getInitials(requester.name || 'U');
+  el('abd-req-type-badge').innerHTML = `<span class="badge badge-primary">${(requester.role || requester.type || 'User').toUpperCase()}</span>`;
 
   // Action Banner vs Existing Decision Card
   const actionBanner = el('action-required-banner');
   const decisionCard = el('existing-decision-card');
 
-  if (b.B_Status === 'Pending') {
+  if (String(b.B_Status).toLowerCase() === 'pending') {
     actionBanner.classList.remove('hidden');
     decisionCard.classList.add('hidden');
   } else {
     actionBanner.classList.add('hidden');
     if (approval) {
       decisionCard.classList.remove('hidden');
-      el('dec-ap-id').textContent = approval.Ap_ID;
-      el('dec-admin-name').textContent = `${approval.A_Name} (${approval.A_ID})`;
-      el('dec-date').textContent = formatDate(approval.Ap_Date);
+      el('dec-ap-id').textContent = approval.Ap_ID || '—';
+      el('dec-admin-name').textContent = approval.A_Name ? `${approval.A_Name} (${approval.A_ID || 'Admin'})` : (approval.A_ID || 'Administrator');
+      el('dec-date').textContent = approval.Ap_Date ? formatDate(approval.Ap_Date) : '—';
       el('dec-remarks').textContent = approval.Remark || '(None provided)';
-      el('decision-badge').innerHTML = statusBadge(approval.Decision);
-      el('decision-icon').textContent = approval.Decision === 'Approved' ? '✅' : '❌';
-      el('decision-title').textContent = `Administrative Decision: ${approval.Decision}`;
+      el('decision-badge').innerHTML = statusBadge(approval.Decision || b.B_Status);
+      el('decision-icon').textContent = String(approval.Decision || b.B_Status).toLowerCase() === 'approved' ? '✅' : '❌';
+      el('decision-title').textContent = `Administrative Decision: ${approval.Decision || b.B_Status}`;
     }
   }
 
@@ -497,25 +507,27 @@ function updateTimeline(booking, approval) {
   const decisionTitle = el('tl-decision-title');
   const decisionDesc = el('tl-decision-desc');
 
-  if (booking.B_Status === 'Pending') {
+  const status = String(booking.B_Status).toLowerCase();
+
+  if (status === 'pending') {
     reviewDot.className = 'timeline-dot active';
     reviewDesc.textContent = 'In review by administration';
     decisionDot.className = 'timeline-dot';
     decisionTitle.textContent = 'Decision Pending';
     decisionDesc.textContent = 'Awaiting administrative approval or rejection';
-  } else if (booking.B_Status === 'Approved') {
+  } else if (status === 'approved') {
     reviewDot.className = 'timeline-dot completed';
     reviewDesc.textContent = 'Review completed';
     decisionDot.className = 'timeline-dot completed';
     decisionTitle.textContent = 'Approved';
-    decisionDesc.textContent = approval ? `Approved on ${formatDate(approval.Ap_Date)} by ${approval.A_Name}` : 'Approved';
-  } else if (booking.B_Status === 'Rejected') {
+    decisionDesc.textContent = approval ? `Approved on ${formatDate(approval.Ap_Date)} by ${approval.A_Name || 'Admin'}` : 'Approved by administration';
+  } else if (status === 'rejected') {
     reviewDot.className = 'timeline-dot completed';
     reviewDesc.textContent = 'Review completed';
     decisionDot.className = 'timeline-dot rejected';
     decisionTitle.textContent = 'Rejected';
-    decisionDesc.textContent = approval ? `Rejected on ${formatDate(approval.Ap_Date)}: "${approval.Remark}"` : 'Rejected';
-  } else if (booking.B_Status === 'Cancelled') {
+    decisionDesc.textContent = approval ? `Rejected on ${formatDate(approval.Ap_Date)}: "${approval.Remark || ''}"` : 'Rejected by administration';
+  } else if (status === 'cancelled') {
     reviewDot.className = 'timeline-dot';
     decisionDot.className = 'timeline-dot';
     decisionTitle.textContent = 'Cancelled';
@@ -524,7 +536,8 @@ function updateTimeline(booking, approval) {
 }
 
 function openApproveModal() {
-  const venue = getVenueById(currentBooking.V_ID);
+  if (!currentBooking) return;
+  const venue = currentBooking.venue || getVenueById(currentBooking.V_ID);
   el('approve-modal-bid').textContent = currentBooking.B_ID;
   el('approve-modal-venue').textContent = venue ? getVenueDisplayName(venue) : 'Venue';
   el('approve-remark').value = '';
@@ -532,6 +545,7 @@ function openApproveModal() {
 }
 
 function openRejectModal() {
+  if (!currentBooking) return;
   el('reject-modal-bid').textContent = currentBooking.B_ID;
   el('reject-remark').value = '';
   el('reject-error').classList.add('hidden');
@@ -552,8 +566,10 @@ function openModifyDecisionModal() {
 }
 
 async function handleApprove() {
+  if (!currentBooking) return;
   const remark = el('approve-remark').value.trim();
   const btn = el('btn-confirm-approve');
+  if (btn.disabled) return;
   btn.textContent = 'Processing...';
   btn.disabled = true;
 
@@ -561,16 +577,15 @@ async function handleApprove() {
     if (window.vAccessAPI) {
       await window.vAccessAPI.approveBooking(currentBooking.B_ID, remark);
     } else {
-      approveBooking(currentBooking.B_ID, remark);
+      const ok = approveBooking(currentBooking.B_ID, remark);
+      if (!ok) throw new Error("Could not approve booking.");
     }
     closeModal('approve-modal');
-    toast.success(`Booking ${currentBooking.B_ID} has been approved via backend!`);
-    loadBookingDetails();
-  } catch (e) {
-    approveBooking(currentBooking.B_ID, remark);
-    closeModal('approve-modal');
-    toast.success(`Booking ${currentBooking.B_ID} approved (local sync)`);
-    loadBookingDetails();
+    toast.success(`Booking ${currentBooking.B_ID} has been approved!`);
+    await loadBookingDetails();
+  } catch (err) {
+    console.error('Approve failed:', err);
+    toast.error(err.message || 'Failed to approve booking.');
   } finally {
     btn.textContent = 'Confirm Approval';
     btn.disabled = false;
@@ -578,6 +593,7 @@ async function handleApprove() {
 }
 
 async function handleReject() {
+  if (!currentBooking) return;
   const remark = el('reject-remark').value.trim();
   if (!remark) {
     el('reject-error').classList.remove('hidden');
@@ -586,6 +602,7 @@ async function handleReject() {
   el('reject-error').classList.add('hidden');
 
   const btn = el('btn-confirm-reject');
+  if (btn.disabled) return;
   btn.textContent = 'Processing...';
   btn.disabled = true;
 
@@ -593,16 +610,15 @@ async function handleReject() {
     if (window.vAccessAPI) {
       await window.vAccessAPI.rejectBooking(currentBooking.B_ID, remark);
     } else {
-      rejectBooking(currentBooking.B_ID, remark);
+      const ok = rejectBooking(currentBooking.B_ID, remark);
+      if (!ok) throw new Error("Could not reject booking.");
     }
     closeModal('reject-modal');
     toast.info(`Booking ${currentBooking.B_ID} was rejected.`);
-    loadBookingDetails();
-  } catch (e) {
-    rejectBooking(currentBooking.B_ID, remark);
-    closeModal('reject-modal');
-    toast.info(`Booking ${currentBooking.B_ID} was rejected.`);
-    loadBookingDetails();
+    await loadBookingDetails();
+  } catch (err) {
+    console.error('Reject failed:', err);
+    toast.error(err.message || 'Failed to reject booking.');
   } finally {
     btn.textContent = 'Confirm Rejection';
     btn.disabled = false;

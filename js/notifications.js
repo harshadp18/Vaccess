@@ -32,7 +32,7 @@ function getMyNotifications() {
 
 /** Count unread notifications for current user */
 function getUnreadCount() {
-  return getMyNotifications().filter(n => !n.read).length;
+  return getMyNotifications().filter(n => !(n.read || n.isRead)).length;
 }
 
 /**
@@ -47,6 +47,7 @@ function createNotification({ type, message, B_ID = null, rno = null, fno = null
     message,
     time:    new Date().toISOString(),
     read:    false,
+    isRead:  false,
     B_ID,
     rno,
     fno,
@@ -66,6 +67,7 @@ function markNotificationRead(id) {
   const n = notifications.find(n => n.id === id);
   if (n) {
     n.read = true;
+    n.isRead = true;
     localStorage.setItem('va_notifications', JSON.stringify(notifications));
     updateNotifBadge();
   }
@@ -77,9 +79,16 @@ function markAllNotificationsRead() {
   if (!session) return;
   const notifications = getNotifications();
   notifications.forEach(n => {
-    if (session.role === 'student' && n.rno === session.id) n.read = true;
-    else if (session.role === 'faculty' && n.fno === session.id) n.read = true;
-    else if (session.role === 'admin') n.read = true;
+    if (session.role === 'student' && n.rno === session.id) {
+      n.read = true;
+      n.isRead = true;
+    } else if (session.role === 'faculty' && n.fno === session.id) {
+      n.read = true;
+      n.isRead = true;
+    } else if (session.role === 'admin') {
+      n.read = true;
+      n.isRead = true;
+    }
   });
   localStorage.setItem('va_notifications', JSON.stringify(notifications));
   updateNotifBadge();
@@ -89,19 +98,20 @@ function markAllNotificationsRead() {
 // BADGE UPDATE
 // ============================================================
 
-/** Update the notification badge count in the topbar */
+/** Update the notification badge count in the topbar and sidebar */
 function updateNotifBadge() {
   const count = getUnreadCount();
-  const badge = document.querySelector('.topbar-btn .badge-indicator');
-  const sidebarBadge = document.querySelector('.nav-notif-badge');
+  const topbarBadges = document.querySelectorAll('.topbar-btn .badge-indicator, #notif-badge-indicator');
+  const sidebarBadges = document.querySelectorAll('.nav-notif-badge');
 
-  if (badge) {
+  topbarBadges.forEach(badge => {
     badge.style.display = count > 0 ? 'block' : 'none';
-  }
-  if (sidebarBadge) {
+  });
+
+  sidebarBadges.forEach(sidebarBadge => {
     sidebarBadge.textContent = count > 0 ? count : '';
     sidebarBadge.style.display = count > 0 ? 'inline-flex' : 'none';
-  }
+  });
 }
 
 // ============================================================

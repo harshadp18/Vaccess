@@ -274,6 +274,24 @@ document.addEventListener('DOMContentLoaded', () => {
   // Update notification badge
   updateNotifBadge();
 
+  // Async sync with live backend
+  if (window.vAccessAPI) {
+    Promise.all([
+      window.vAccessAPI.getAdminBookings().catch(e => console.warn(e)),
+      window.vAccessAPI.getAdminDashboardStats().catch(e => console.warn(e)),
+      window.vAccessAPI.getAdminStudents ? window.vAccessAPI.getAdminStudents().catch(e => console.warn(e)) : Promise.resolve(),
+      window.vAccessAPI.getAdminFaculty ? window.vAccessAPI.getAdminFaculty().catch(e => console.warn(e)) : Promise.resolve(),
+      window.vAccessAPI.getVenues ? window.vAccessAPI.getVenues().catch(e => console.warn(e)) : Promise.resolve(),
+      window.vAccessAPI.getNotifications ? window.vAccessAPI.getNotifications().catch(e => console.warn(e)) : Promise.resolve()
+    ]).then(() => {
+      renderAdminStats();
+      renderPendingTable();
+      renderRecentBookings();
+      renderVenueStatusSummary();
+      updateNotifBadge();
+    });
+  }
+
   // Logout listener
   el('sidebar-logout').addEventListener('click', (e) => {
     e.preventDefault();

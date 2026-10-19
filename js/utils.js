@@ -145,6 +145,21 @@ function createElement(tag, classes, html) {
   return e;
 }
 
+/** Sanitize string for safe insertion into HTML */
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, function (char) {
+    const entities = {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    };
+    return entities[char];
+  });
+}
+window.escapeHtml = escapeHtml;
+
 // ============================================================
 // TOAST NOTIFICATIONS
 // ============================================================

@@ -100,15 +100,73 @@ const STANDARD_TIMESLOTS = [
   { StartTime: '17:00', EndTime: '18:00', label: '17:00 – 18:00' },
 ];
 
+// ============================================================
+// DEFAULT SYSTEM ACCOUNTS (Ready for login and evaluation)
+// ============================================================
+const DEFAULT_ADMINS = [
+  {
+    A_ID: 'ADM001',
+    A_Name: 'Administrator',
+    A_Email: 'admin@vaccess.edu',
+    password: 'Admin@123',
+    role: 'admin'
+  },
+  {
+    A_ID: 'ADM002',
+    A_Name: 'System Admin',
+    A_Email: 'admin@college.edu',
+    password: 'admin',
+    role: 'admin'
+  }
+];
+
+const DEFAULT_STUDENTS = [
+  {
+    rno: 'S001',
+    S_name: 'Alex Mercer',
+    S_Email: 'alex.mercer@vaccess.edu',
+    password: 'Student@123',
+    Dept: 'Computer Science',
+    ContactNo: '9876543210'
+  },
+  {
+    rno: 'S002',
+    S_name: 'Aarav Mehta',
+    S_Email: 'student@college.edu',
+    password: 'Student@123',
+    Dept: 'Computer Science',
+    ContactNo: '9876543210'
+  }
+];
+
+const DEFAULT_FACULTY = [
+  {
+    fno: 'F001',
+    F_name: 'Dr. Sarah Jenkins',
+    F_Email: 'sarah.jenkins@vaccess.edu',
+    password: 'Faculty@123',
+    Dept: 'Computer Science',
+    ContactNo: '9811223344'
+  },
+  {
+    fno: 'F002',
+    F_name: 'Dr. Suresh Kumar',
+    F_Email: 'faculty@college.edu',
+    password: 'Faculty@123',
+    Dept: 'Computer Science',
+    ContactNo: '9811223344'
+  }
+];
+
 /**
  * Initialize localStorage:
- * Removes legacy dummy data, wipes demo accounts, and ensures clean tables exist.
+ * Ensures collections exist and default evaluation accounts are available.
  */
 function initMockData() {
   const currentVersion = localStorage.getItem(DB_VERSION_KEY);
 
-  // If old version or uninitialized, purge legacy dummy bookings/approvals/users
-  if (currentVersion !== 'v4_clean') {
+  // If old version or uninitialized, purge legacy dummy data
+  if (currentVersion !== 'v5_clean') {
     localStorage.removeItem('va_bookings');
     localStorage.removeItem('va_timeslots');
     localStorage.removeItem('va_approvals');
@@ -117,13 +175,34 @@ function initMockData() {
     localStorage.removeItem('va_faculty');
     localStorage.removeItem('va_admins');
     localStorage.removeItem('va_session');
-    localStorage.setItem(DB_VERSION_KEY, 'v4_clean');
+    localStorage.setItem(DB_VERSION_KEY, 'v5_clean');
   }
 
-  // Ensure empty collections exist if null
-  if (!localStorage.getItem('va_students'))      localStorage.setItem('va_students',      JSON.stringify([]));
-  if (!localStorage.getItem('va_faculty'))       localStorage.setItem('va_faculty',       JSON.stringify([]));
-  if (!localStorage.getItem('va_admins'))        localStorage.setItem('va_admins',        JSON.stringify([]));
+  // Ensure default accounts exist
+  const storedAdmins = JSON.parse(localStorage.getItem('va_admins') || '[]');
+  if (storedAdmins.length === 0) {
+    localStorage.setItem('va_admins', JSON.stringify(DEFAULT_ADMINS));
+  } else if (!storedAdmins.some(a => a.A_Email.toLowerCase() === 'admin@vaccess.edu')) {
+    storedAdmins.push(DEFAULT_ADMINS[0]);
+    localStorage.setItem('va_admins', JSON.stringify(storedAdmins));
+  }
+
+  const storedStudents = JSON.parse(localStorage.getItem('va_students') || '[]');
+  if (storedStudents.length === 0) {
+    localStorage.setItem('va_students', JSON.stringify(DEFAULT_STUDENTS));
+  } else if (!storedStudents.some(s => s.S_Email.toLowerCase() === 'alex.mercer@vaccess.edu')) {
+    storedStudents.push(DEFAULT_STUDENTS[0]);
+    localStorage.setItem('va_students', JSON.stringify(storedStudents));
+  }
+
+  const storedFaculty = JSON.parse(localStorage.getItem('va_faculty') || '[]');
+  if (storedFaculty.length === 0) {
+    localStorage.setItem('va_faculty', JSON.stringify(DEFAULT_FACULTY));
+  } else if (!storedFaculty.some(f => f.F_Email.toLowerCase() === 'sarah.jenkins@vaccess.edu')) {
+    storedFaculty.push(DEFAULT_FACULTY[0]);
+    localStorage.setItem('va_faculty', JSON.stringify(storedFaculty));
+  }
+
   if (!localStorage.getItem('va_bookings'))      localStorage.setItem('va_bookings',      JSON.stringify([]));
   if (!localStorage.getItem('va_timeslots'))     localStorage.setItem('va_timeslots',     JSON.stringify([]));
   if (!localStorage.getItem('va_approvals'))     localStorage.setItem('va_approvals',     JSON.stringify([]));

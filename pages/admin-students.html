@@ -262,6 +262,17 @@ document.addEventListener('DOMContentLoaded', () => {
   loadDepartmentFilters();
   renderStudentList();
 
+  // Async sync with live backend
+  if (window.vAccessAPI) {
+    Promise.all([
+      window.vAccessAPI.getAdminStudents ? window.vAccessAPI.getAdminStudents() : Promise.resolve(),
+      window.vAccessAPI.getAdminBookings ? window.vAccessAPI.getAdminBookings() : Promise.resolve()
+    ]).then(() => {
+      loadDepartmentFilters();
+      renderStudentList();
+    }).catch(e => console.warn('Students sync error:', e));
+  }
+
   // Search and filter listeners
   el('search-students').addEventListener('input', renderStudentList);
   el('filter-dept').addEventListener('change', renderStudentList);
@@ -272,7 +283,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Form submit
-  el('student-form').addEventListener('submit', (e) => {
+  el('student-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const editRno = el('student-edit-rno').value;
     const name    = el('student-name').value.trim();
@@ -281,32 +292,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const dept    = el('student-dept').value;
     const pass    = el('student-password').value;
 
-    saveStudent({
+    const payload = {
       rno: editRno || null,
       S_name: name,
       S_Email: email,
       ContactNo: contact,
       Dept: dept,
       password: pass
-    });
+    };
+
+    if (window.vAccessAPI && window.vAccessAPI.saveStudent) {
+      await window.vAccessAPI.saveStudent(payload);
+    } else {
+      saveStudent(payload);
+    }
 
     toast.success(`Student ${editRno ? 'updated' : 'added'} successfully`);
     closeModal('student-modal');
     loadDepartmentFilters();
     renderStudentList();
-  });
-
-  // Logout listener
-  el('sidebar-logout').addEventListener('click', (e) => {
-    e.preventDefault();
-    showConfirm({
-      title: 'Log Out',
-      message: 'Sign out of the Admin Portal?',
-      icon: '🚪',
-      confirmText: 'Log Out',
-      confirmClass: 'btn-primary',
-      onConfirm: () => logout()
-    });
   });
 });
 
@@ -402,11 +406,19 @@ function handleDeleteStudent(rno) {
     icon: '🗑️',
     confirmText: 'Delete Student',
     confirmClass: 'btn-danger',
-    onConfirm: () => {
-      deleteStudent(rno);
-      toast.info(`Student ${rno} deleted.`);
-      loadDepartmentFilters();
-      renderStudentList();
+    onConfirm: async () => {
+      try {
+        if (window.vAccessAPI && window.vAccessAPI.deleteStudent) {
+          await window.vAccessAPI.deleteStudent(rno);
+        } else {
+          deleteStudent(rno);
+        }
+        toast.info(`Student ${rno} deleted.`);
+        loadDepartmentFilters();
+        renderStudentList();
+      } catch (err) {
+        toast.error(err.message || 'Failed to delete student');
+      }
     }
   });
 }

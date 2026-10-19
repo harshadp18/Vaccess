@@ -91,14 +91,14 @@
 <script src="../js/admin.js"></script>
 <script src="../js/app.js"></script>
 <script>
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   if (!requireUser()) return;
   const session = getSession();
   if (!session) return;
   const bId = getParam('id');
   if (!bId) { renderError('No booking ID provided.'); return; }
   el('topbar-bid').textContent = bId;
-  renderBookingDetail(bId);
+  await renderBookingDetail(bId);
 
   el('sidebar-logout').addEventListener('click', (e) => {
     e.preventDefault();
@@ -106,26 +106,50 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-function renderBookingDetail(bId) {
-  const booking  = getBookingById(bId);
+async function renderBookingDetail(bId) {
   const container = el('booking-detail-content');
+  let booking = null;
+
+  if (window.vAccessAPI && window.vAccessAPI.getBookingById) {
+    try {
+      booking = await window.vAccessAPI.getBookingById(bId);
+    } catch (err) {
+      console.warn('API getBookingById error:', err.message);
+    }
+  }
+
+  if (!booking && typeof getBookingById === 'function') {
+    booking = getBookingById(bId);
+  }
 
   if (!booking) {
     container.innerHTML = `
       <div class="empty-state">
         <div class="empty-state-icon">🔍</div>
         <h3>Booking Not Found</h3>
-        <p>The booking <strong>${bId}</strong> does not exist.</p>
+        <p>The booking <strong>${escapeHtml(bId)}</strong> does not exist.</p>
         <a href="my-bookings.html" class="btn btn-primary" style="margin-top:var(--space-4);">Back to My Bookings</a>
       </div>`;
     return;
   }
 
-  const venue    = getVenueById(booking.V_ID);
-  const slots    = getTimeslotsForBooking(bId);
-  const slot     = slots[0];
-  const approval = getApprovalForBooking(bId);
-  const requester = getRequesterInfo(booking);
+  const venue = (booking.venue && booking.venue.V_type) ? booking.venue : (typeof getVenueById === 'function' ? getVenueById(booking.V_ID) : null);
+  
+  let slot = booking.slot;
+  if (!slot && typeof getTimeslotsForBooking === 'function') {
+    const slots = getTimeslotsForBooking(bId);
+    slot = slots && slots.length > 0 ? slots[0] : null;
+  }
+  if (!slot && (booking.eventDate || booking.eventdate)) {
+    slot = {
+      EventDate: booking.eventDate || booking.eventdate,
+      StartTime: booking.startTime || booking.starttime,
+      EndTime: booking.endTime || booking.endtime
+    };
+  }
+
+  const approval = booking.approval || (typeof getApprovalForBooking === 'function' ? getApprovalForBooking(bId) : null);
+  const requester = booking.requester || (typeof getRequesterInfo === 'function' ? getRequesterInfo(booking) : null);
   const canCancel = booking.B_Status === 'Pending';
 
   // Status color
@@ -141,7 +165,7 @@ function renderBookingDetail(bId) {
       <div class="timeline-desc">Status set to Pending. Awaiting admin review.</div>
     </div>
     <div class="timeline-item ${booking.B_Status !== 'Pending' ? 'active' : ''}">
-      <div class="timeline-date">${approval ? formatDate(approval.Ap_Date) : 'Pending'}</div>
+      <div class="timeline-date">${approval && approval.Ap_Date ? formatDate(approval.Ap_Date) : 'Pending'}</div>
       <div class="timeline-label">Under Review</div>
       <div class="timeline-desc">Admin reviewing the booking request.</div>
     </div>`;
@@ -149,16 +173,16 @@ function renderBookingDetail(bId) {
   if (booking.B_Status === 'Approved') {
     timelineHTML += `
       <div class="timeline-item done">
-        <div class="timeline-date">${approval ? formatDate(approval.Ap_Date) : '—'}</div>
+        <div class="timeline-date">${approval && approval.Ap_Date ? formatDate(approval.Ap_Date) : '—'}</div>
         <div class="timeline-label">✅ Approved</div>
-        <div class="timeline-desc">Booking approved by ${approval ? approval.A_Name : 'Admin'}.</div>
+        <div class="timeline-desc">Booking approved by ${approval && approval.A_Name ? approval.A_Name : 'Admin'}.</div>
       </div>`;
   } else if (booking.B_Status === 'Rejected') {
     timelineHTML += `
       <div class="timeline-item rejected">
-        <div class="timeline-date">${approval ? formatDate(approval.Ap_Date) : '—'}</div>
+        <div class="timeline-date">${approval && approval.Ap_Date ? formatDate(approval.Ap_Date) : '—'}</div>
         <div class="timeline-label">❌ Rejected</div>
-        <div class="timeline-desc">Booking rejected by ${approval ? approval.A_Name : 'Admin'}.</div>
+        <div class="timeline-desc">Booking rejected by ${approval && approval.A_Name ? approval.A_Name : 'Admin'}.</div>
       </div>`;
   } else if (booking.B_Status === 'Cancelled') {
     timelineHTML += `
@@ -291,11 +315,14 @@ function renderBookingDetail(bId) {
         icon: '⚠️',
         confirmText: 'Cancel Booking',
         confirmClass: 'btn-danger',
-        onConfirm: () => {
-          if (cancelBooking(bId)) {
-            showToast(`Booking ${bId} cancelled.`, 'success');
-            setTimeout(() => renderBookingDetail(bId), 500);
+        onConfirm: async () => {
+          if (window.vAccessAPI && window.vAccessAPI.cancelBooking) {
+            await window.vAccessAPI.cancelBooking(bId);
+          } else if (typeof cancelBooking === 'function') {
+            cancelBooking(bId);
           }
+          showToast(`Booking ${bId} cancelled.`, 'success');
+          setTimeout(() => renderBookingDetail(bId), 500);
         }
       });
     });

@@ -269,19 +269,29 @@ function getAdminStats() {
 function getEnrichedBookings(filters = {}) {
   const bookings = filterBookings({ ...filters });
   return bookings.map(b => {
-    const venue     = getVenueById(b.V_ID);
-    const requester = getRequesterInfo(b);
-    const slots     = getTimeslotsForBooking(b.B_ID);
-    const approval  = getApprovalForBooking(b.B_ID);
+    const venue     = (b.venue && b.venue.V_type) ? b.venue : (getVenueById(b.V_ID) || null);
+    const requester = (b.requester && b.requester.name) ? b.requester : (getRequesterInfo(b) || null);
+    const slots     = (b.slots && b.slots.length) ? b.slots : getTimeslotsForBooking(b.B_ID);
+    const approval  = b.approval || getApprovalForBooking(b.B_ID);
+    const fallbackDate = b.eventDate || (slots.length ? slots[0].EventDate : (b.B_Date || null));
+    const fallbackTime = b.timeRange || (slots.length && slots[0].StartTime ? `${formatTime(slots[0].StartTime)} – ${formatTime(slots[0].EndTime)}` : '—');
+
     return {
       ...b,
       venue,
-      venueName:    venue ? getVenueDisplayName(venue) : 'Unknown Venue',
-      requester,
+      venueName:    venue ? getVenueDisplayName(venue) : (b.venueName || 'Unknown Venue'),
+      requester:    requester || {
+        name: b.student_name || b.faculty_name || (b.rno ? 'Student ' + b.rno : (b.fno ? 'Faculty ' + b.fno : 'Requester')),
+        email: b.student_email || b.faculty_email || '',
+        dept: b.student_dept || b.faculty_dept || 'General',
+        type: b.rno ? 'Student' : (b.fno ? 'Faculty' : 'User'),
+        role: b.rno ? 'Student' : (b.fno ? 'Faculty' : 'User'),
+        contact: b.student_contact || b.faculty_contact || '—'
+      },
       slots,
       approval,
-      eventDate:    slots.length ? slots[0].EventDate : null,
-      timeRange:    slots.length ? `${formatTime(slots[0].StartTime)} – ${formatTime(slots[0].EndTime)}` : '—',
+      eventDate:    fallbackDate,
+      timeRange:    fallbackTime,
     };
   });
 }

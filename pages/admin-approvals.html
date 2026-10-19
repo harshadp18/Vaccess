@@ -207,6 +207,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   renderApprovalsList();
 
+  if (window.vAccessAPI && window.vAccessAPI.getAdminBookings) {
+    window.vAccessAPI.getAdminBookings().then(() => {
+      renderApprovalsList();
+    }).catch(err => console.warn('Approvals sync error:', err.message));
+  }
+
   el('search-approvals').addEventListener('input', renderApprovalsList);
   el('filter-decision').addEventListener('change', renderApprovalsList);
   el('btn-reset-filters').addEventListener('click', () => {

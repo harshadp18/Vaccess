@@ -6,12 +6,48 @@
 
 document.addEventListener('DOMContentLoaded', () => {
   initSidebar();
+  initSidebarLogout();
   markActiveSidebarLink();
   initModalClose();
   updateNotifBadge();
   updateSidebarUser();
   updateTopbarUser();
 });
+
+/** Shared sidebar logout initialization */
+function initSidebarLogout() {
+  const logoutBtn = document.getElementById('sidebar-logout');
+  if (!logoutBtn || logoutBtn.dataset.boundLogout) return;
+  logoutBtn.dataset.boundLogout = 'true';
+
+  logoutBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (typeof showConfirm === 'function') {
+      showConfirm({
+        title: 'Log Out',
+        message: 'Are you sure you want to log out of vAccess?',
+        icon: '🚪',
+        confirmText: 'Log Out',
+        confirmClass: 'btn-primary',
+        onConfirm: () => {
+          if (typeof logout === 'function') {
+            logout();
+          } else {
+            window.location.href = '../index.html';
+          }
+        }
+      });
+    } else {
+      if (window.confirm('Are you sure you want to log out?')) {
+        if (typeof logout === 'function') {
+          logout();
+        } else {
+          window.location.href = '../index.html';
+        }
+      }
+    }
+  });
+}
 
 /** Populate sidebar user info from session */
 function updateSidebarUser() {

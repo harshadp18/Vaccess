@@ -223,6 +223,55 @@
   </div>
 </div>
 
+<!-- Modal: Approve Booking -->
+<div class="modal-overlay" id="approve-modal" role="dialog" aria-modal="true" aria-labelledby="approve-modal-title">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="modal-title" id="approve-modal-title">Approve Booking Request</h2>
+      <button class="modal-close" data-modal-close aria-label="Close">×</button>
+    </div>
+    <div class="modal-body">
+      <div style="margin-bottom:var(--space-4);">
+        <p>You are approving booking request <strong id="approve-modal-bid"></strong> for <strong id="approve-modal-venue"></strong>.</p>
+        <p style="font-size:var(--font-size-sm);color:var(--color-text-muted);">The venue will be confirmed and an automated notification will be sent to the requester.</p>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="approve-remark">Approval Remarks (Optional)</label>
+        <textarea id="approve-remark" class="form-control" rows="3" placeholder="e.g., Key can be collected from Security Desk. AV system enabled."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" data-modal-close>Cancel</button>
+      <button class="btn btn-success" id="btn-confirm-approve">Confirm Approval</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Reject Booking -->
+<div class="modal-overlay" id="reject-modal" role="dialog" aria-modal="true" aria-labelledby="reject-modal-title">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="modal-title" id="reject-modal-title" style="color:var(--color-danger);">Reject Booking Request</h2>
+      <button class="modal-close" data-modal-close aria-label="Close">×</button>
+    </div>
+    <div class="modal-body">
+      <div style="margin-bottom:var(--space-4);">
+        <p>You are rejecting booking request <strong id="reject-modal-bid"></strong>.</p>
+        <p style="font-size:var(--font-size-sm);color:var(--color-text-muted);">Please provide a clear reason for rejection so the requester understands why their request could not be accommodated.</p>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="reject-remark">Reason for Rejection <span class="required">*</span></label>
+        <textarea id="reject-remark" class="form-control" rows="3" placeholder="e.g., Venue unavailable due to scheduled annual maintenance. Please choose another date." required></textarea>
+        <div id="reject-error" class="form-error hidden">Please provide a reason for rejection.</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" data-modal-close>Cancel</button>
+      <button class="btn btn-danger" id="btn-confirm-reject">Confirm Rejection</button>
+    </div>
+  </div>
+</div>
+
 <!-- Confirm Dialog -->
 <div class="modal-overlay confirm-dialog" id="confirm-dialog-overlay" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
   <div class="modal">
@@ -290,18 +339,15 @@ document.addEventListener('DOMContentLoaded', () => {
   el('date-filter').addEventListener('change', applyFilters);
   el('btn-reset-filters').addEventListener('click', resetAllFilters);
 
+  // Bind decision modal buttons
+  el('btn-confirm-approve').addEventListener('click', handleDirectoryApprove);
+  el('btn-confirm-reject').addEventListener('click', handleDirectoryReject);
+
   // Initial render
   applyFilters();
 
   // Async sync with live backend
-  if (window.vAccessAPI) {
-    window.vAccessAPI.getAdminBookings().then(backendBookings => {
-      if (backendBookings && backendBookings.length) {
-        updateStatsHeader();
-        applyFilters();
-      }
-    }).catch(e => console.warn('Admin bookings sync:', e.message));
-  }
+  syncAndRefresh();
 
   // Sidebar pending badge
   const pendingCount = getBookings().filter(b => b.B_Status === 'Pending').length;
@@ -414,7 +460,7 @@ function renderBookings(list) {
 
   // Desktop Table Rows
   tbody.innerHTML = list.map(b => {
-    const isPending = b.B_Status === 'Pending';
+    const isPending = String(b.B_Status).toLowerCase() === 'pending';
     const req = b.requester || { name: 'Unknown', dept: '—', type: 'User' };
     const dateFormatted = b.eventDate ? formatDate(b.eventDate) : '—';
     return `
@@ -425,12 +471,12 @@ function renderBookings(list) {
         <td>
           <div style="font-weight:600;color:var(--color-gray-900);">${escapeHtml(req.name)}</div>
           <div style="font-size:var(--font-size-xs);color:var(--color-text-muted);">
-            ${escapeHtml(req.dept)} • <span style="text-transform:capitalize;">${escapeHtml(req.type)}</span>
+            ${escapeHtml(req.dept)} • <span style="text-transform:capitalize;">${escapeHtml(req.type || req.role || 'User')}</span>
           </div>
         </td>
         <td>
           <div style="font-weight:500;">${escapeHtml(b.venueName)}</div>
-          <div style="font-size:var(--font-size-xs);color:var(--color-text-muted);">${b.venue ? escapeHtml(b.venue.SubType) : ''}</div>
+          <div style="font-size:var(--font-size-xs);color:var(--color-text-muted);">${b.venue ? escapeHtml(b.venue.SubType || '') : ''}</div>
         </td>
         <td>
           <div style="font-weight:500;">${dateFormatted}</div>
@@ -442,9 +488,15 @@ function renderBookings(list) {
         <td>${b.noOfMembers || b.NoOfMembers || '—'}</td>
         <td>${statusBadge(b.B_Status)}</td>
         <td>
-          <a href="admin-booking-details.html?id=${b.B_ID}" class="btn btn-sm ${isPending ? 'btn-primary' : 'btn-secondary'}">
-            ${isPending ? 'Review' : 'Details'}
-          </a>
+          <div style="display:flex;gap:var(--space-1);align-items:center;flex-wrap:wrap;">
+            ${isPending ? `
+              <button class="btn btn-xs btn-success" onclick="openDirectoryApproveModal('${b.B_ID}')" title="Approve booking ${b.B_ID}">✓ Approve</button>
+              <button class="btn btn-xs btn-danger" onclick="openDirectoryRejectModal('${b.B_ID}')" title="Reject booking ${b.B_ID}">✕ Reject</button>
+            ` : ''}
+            <a href="admin-booking-details.html?id=${b.B_ID}" class="btn btn-xs ${isPending ? 'btn-outline' : 'btn-secondary'}">
+              ${isPending ? 'Review' : 'Details'}
+            </a>
+          </div>
         </td>
       </tr>
     `;
@@ -452,6 +504,7 @@ function renderBookings(list) {
 
   // Mobile Cards
   cardsContainer.innerHTML = list.map(b => {
+    const isPending = String(b.B_Status).toLowerCase() === 'pending';
     const req = b.requester || { name: 'Unknown', dept: '—', type: 'User' };
     const dateFormatted = b.eventDate ? formatDate(b.eventDate) : '—';
     return `
@@ -469,14 +522,121 @@ function renderBookings(list) {
         <div style="font-size:var(--font-size-sm);margin-bottom:var(--space-3);">
           📅 ${dateFormatted} | ⏰ ${b.timeRange}
         </div>
-        <div style="display:flex;justify-content:flex-end;">
-          <a href="admin-booking-details.html?id=${b.B_ID}" class="btn btn-sm btn-primary">
-            ${b.B_Status === 'Pending' ? 'Review & Decide' : 'View Full Details'}
+        <div style="display:flex;gap:var(--space-2);justify-content:flex-end;flex-wrap:wrap;">
+          ${isPending ? `
+            <button class="btn btn-sm btn-success" onclick="openDirectoryApproveModal('${b.B_ID}')">✓ Approve</button>
+            <button class="btn btn-sm btn-danger" onclick="openDirectoryRejectModal('${b.B_ID}')">✕ Reject</button>
+          ` : ''}
+          <a href="admin-booking-details.html?id=${b.B_ID}" class="btn btn-sm ${isPending ? 'btn-outline' : 'btn-primary'}">
+            ${isPending ? 'Review & Details' : 'View Full Details'}
           </a>
         </div>
       </div>
     `;
   }).join('');
+}
+
+let selectedActionBookingId = null;
+
+function openDirectoryApproveModal(bId) {
+  selectedActionBookingId = bId;
+  const booking = currentBookings.find(b => String(b.B_ID) === String(bId)) || getBookingById(bId);
+  el('approve-modal-bid').textContent = bId;
+  el('approve-modal-venue').textContent = booking ? (booking.venueName || 'Venue') : 'Venue';
+  el('approve-remark').value = '';
+  openModal('approve-modal');
+}
+
+function openDirectoryRejectModal(bId) {
+  selectedActionBookingId = bId;
+  el('reject-modal-bid').textContent = bId;
+  el('reject-remark').value = '';
+  el('reject-error').classList.add('hidden');
+  openModal('reject-modal');
+}
+
+async function handleDirectoryApprove() {
+  if (!selectedActionBookingId) return;
+  const bId = selectedActionBookingId;
+  const remark = el('approve-remark').value.trim();
+  const btn = el('btn-confirm-approve');
+  if (btn.disabled) return;
+  btn.textContent = 'Processing...';
+  btn.disabled = true;
+
+  try {
+    if (window.vAccessAPI) {
+      await window.vAccessAPI.approveBooking(bId, remark);
+    } else {
+      const ok = approveBooking(bId, remark);
+      if (!ok) throw new Error("Could not approve booking.");
+    }
+    closeModal('approve-modal');
+    toast.success(`Booking ${bId} has been approved!`);
+    await syncAndRefresh();
+  } catch (err) {
+    console.error('Approve failed:', err);
+    toast.error(err.message || 'Failed to approve booking.');
+  } finally {
+    btn.textContent = 'Confirm Approval';
+    btn.disabled = false;
+  }
+}
+
+async function handleDirectoryReject() {
+  if (!selectedActionBookingId) return;
+  const bId = selectedActionBookingId;
+  const remark = el('reject-remark').value.trim();
+  if (!remark) {
+    el('reject-error').classList.remove('hidden');
+    return;
+  }
+  el('reject-error').classList.add('hidden');
+
+  const btn = el('btn-confirm-reject');
+  if (btn.disabled) return;
+  btn.textContent = 'Processing...';
+  btn.disabled = true;
+
+  try {
+    if (window.vAccessAPI) {
+      await window.vAccessAPI.rejectBooking(bId, remark);
+    } else {
+      const ok = rejectBooking(bId, remark);
+      if (!ok) throw new Error("Could not reject booking.");
+    }
+    closeModal('reject-modal');
+    toast.info(`Booking ${bId} was rejected.`);
+    await syncAndRefresh();
+  } catch (err) {
+    console.error('Reject failed:', err);
+    toast.error(err.message || 'Failed to reject booking.');
+  } finally {
+    btn.textContent = 'Confirm Rejection';
+    btn.disabled = false;
+  }
+}
+
+async function syncAndRefresh() {
+  if (window.vAccessAPI) {
+    try {
+      await Promise.all([
+        window.vAccessAPI.getAdminBookings(),
+        window.vAccessAPI.getNotifications ? window.vAccessAPI.getNotifications().catch(() => {}) : Promise.resolve()
+      ]);
+    } catch (e) {
+      console.warn('Sync failed:', e.message);
+    }
+  }
+  updateStatsHeader();
+  applyFilters();
+  const pendingCount = getBookings().filter(b => String(b.B_Status).toLowerCase() === 'pending').length;
+  const badge = el('sidebar-pending-badge');
+  if (badge) {
+    badge.textContent = pendingCount;
+    badge.style.display = pendingCount > 0 ? 'inline-block' : 'none';
+  }
+  if (typeof updateNotifBadge === 'function') updateNotifBadge();
 }
 
 function exportCSV() {
@@ -507,6 +667,20 @@ function exportCSV() {
   link.click();
   document.body.removeChild(link);
   toast.success('Bookings exported to CSV');
+}
+
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, function (char) {
+    const entities = {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    };
+
+    return entities[char];
+  });
 }
 </script>
 </body>

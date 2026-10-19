@@ -5,7 +5,8 @@
   "description": "vAccess Backend Server",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "node --test"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",

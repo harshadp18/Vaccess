@@ -17,7 +17,7 @@ function getVenues() {
 
 /** Get a single venue by V_ID */
 function getVenueById(vId) {
-  return getVenues().find(v => v.V_ID === vId) || null;
+  return getVenues().find(v => String(v.V_ID) === String(vId) || String(v.v_id) === String(vId)) || null;
 }
 
 /** Get display name for a venue */
@@ -103,15 +103,15 @@ function getTimeslots() {
 function getAvailableSlots(vId, date) {
   // Get all bookings for this venue on this date with non-cancelled status
   const bookings = getBookings().filter(b =>
-    b.V_ID === vId &&
-    b.B_Status !== 'Cancelled' &&
-    b.B_Status !== 'Rejected'
+    (String(b.V_ID) === String(vId) || String(b.v_id) === String(vId)) &&
+    String(b.B_Status).toLowerCase() !== 'cancelled' &&
+    String(b.B_Status).toLowerCase() !== 'rejected'
   );
-  const bookingIds = bookings.map(b => b.B_ID);
+  const bookingIds = bookings.map(b => String(b.B_ID));
 
   // Get all timeslots for those bookings on this date
   const bookedSlots = getTimeslots().filter(ts =>
-    ts.EventDate === date && bookingIds.includes(ts.B_ID)
+    ts.EventDate === date && (bookingIds.includes(String(ts.B_ID)) || bookingIds.includes(`B${String(ts.B_ID).padStart(3, '0')}`))
   );
 
   // Map standard time slots against booked ones

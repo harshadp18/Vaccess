@@ -190,6 +190,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   renderAdminsList();
 
+  if (window.vAccessAPI && window.vAccessAPI.getAdminUsers) {
+    window.vAccessAPI.getAdminUsers().then(() => {
+      renderAdminsList();
+    }).catch(e => console.warn(e));
+  }
+
   el('admin-form').addEventListener('submit', (e) => {
     e.preventDefault();
     const editId = el('admin-edit-id').value;

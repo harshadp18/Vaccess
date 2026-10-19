@@ -302,13 +302,32 @@ document.addEventListener('DOMContentLoaded', () => {
     if (v) selectVenue(v);
   }
 
-  // Populate filters
-  const typeEl = el('s1-type');
-  getVenueTypes().forEach(t => {
-    const o = document.createElement('option'); o.value = t; o.textContent = t; typeEl.appendChild(o);
-  });
+  function populateTypeOptions() {
+    const typeEl = el('s1-type');
+    const current = typeEl.value;
+    typeEl.innerHTML = '<option value="">All Venue Types</option>';
+    getVenueTypes().forEach(t => {
+      const o = document.createElement('option');
+      o.value = t;
+      o.textContent = t;
+      if (t === current) o.selected = true;
+      typeEl.appendChild(o);
+    });
+  }
 
+  populateTypeOptions();
   renderVenueGrid();
+
+  if (window.vAccessAPI && window.vAccessAPI.getVenues) {
+    window.vAccessAPI.getVenues().then(() => {
+      populateTypeOptions();
+      renderVenueGrid();
+      if (preVenueId) {
+        const v = getVenueById(preVenueId);
+        if (v) selectVenue(v);
+      }
+    }).catch(e => console.warn('Venues sync error:', e));
+  }
 
   // Events
   el('s1-search').addEventListener('input', debounce(renderVenueGrid, 250));

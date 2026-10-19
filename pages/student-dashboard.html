@@ -229,10 +229,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Async sync with live backend
   if (window.vAccessAPI) {
-    window.vAccessAPI.getNotifications().then(() => {
-      renderNotifPreview();
-      updateNotifBadge();
-    }).catch(e => console.warn(e));
+    if (window.vAccessAPI.getMyBookings) {
+      window.vAccessAPI.getMyBookings().then(() => {
+        renderStats();
+        renderRecentBookings();
+        renderUpcoming();
+      }).catch(e => console.warn('Bookings sync error:', e));
+    }
+
+    if (window.vAccessAPI.getNotifications) {
+      window.vAccessAPI.getNotifications().then(() => {
+        renderNotifPreview();
+        updateNotifBadge();
+      }).catch(e => console.warn(e));
+    }
   }
 
   // Logout
@@ -299,15 +309,17 @@ function renderRecentBookings() {
   }
 
   const rows = bookings.map(b => {
-    const venue  = getVenueById(b.V_ID);
+    const venue  = (b.venue && b.venue.V_type) ? b.venue : (getVenueById(b.V_ID) || null);
     const slots  = getTimeslotsForBooking(b.B_ID);
-    const slot   = slots[0];
+    const slot   = (slots && slots[0]) || b.slot || (b.eventDate ? { EventDate: b.eventDate, StartTime: b.startTime, EndTime: b.endTime } : null);
+    const eventDate = slot ? slot.EventDate : (b.eventDate || b.B_Date);
+    const timeDisplay = slot && slot.StartTime && slot.EndTime ? `${formatTime(slot.StartTime)} – ${formatTime(slot.EndTime)}` : (b.timeRange || '—');
     return `
       <tr>
         <td><span class="font-semibold" style="color:var(--color-primary);">${b.B_ID}</span></td>
-        <td>${venue ? getVenueDisplayName(venue) : '—'}</td>
-        <td>${slot ? formatDate(slot.EventDate) : formatDate(b.B_Date)}</td>
-        <td>${slot ? `${formatTime(slot.StartTime)} – ${formatTime(slot.EndTime)}` : '—'}</td>
+        <td>${venue ? getVenueDisplayName(venue) : (b.venueName || '—')}</td>
+        <td>${eventDate ? formatDate(eventDate) : '—'}</td>
+        <td>${timeDisplay}</td>
         <td>${statusBadge(b.B_Status)}</td>
         <td>
           <a href="booking-details.html?id=${b.B_ID}" class="btn btn-sm btn-secondary" aria-label="View booking ${b.B_ID}">View</a>
@@ -342,10 +354,12 @@ function renderUpcoming() {
   }
 
   container.innerHTML = upcoming.map(b => {
-    const venue = getVenueById(b.V_ID);
+    const venue = (b.venue && b.venue.V_type) ? b.venue : (getVenueById(b.V_ID) || null);
     const slots = getTimeslotsForBooking(b.B_ID);
-    const slot  = slots[0];
-    const d     = slot ? new Date(slot.EventDate + 'T00:00:00') : null;
+    const slot  = (slots && slots[0]) || b.slot || (b.eventDate ? { EventDate: b.eventDate, StartTime: b.startTime, EndTime: b.endTime } : null);
+    const eventDate = slot ? slot.EventDate : (b.eventDate || b.B_Date);
+    const d     = eventDate ? new Date(eventDate + 'T00:00:00') : null;
+    const timeDisplay = slot && slot.StartTime && slot.EndTime ? `${formatTime(slot.StartTime)} – ${formatTime(slot.EndTime)}` : (b.timeRange || '—');
     return `
       <div class="upcoming-booking-item">
         <div class="upcoming-date-badge">
@@ -353,8 +367,8 @@ function renderUpcoming() {
           <div class="upcoming-date-month">${d ? d.toLocaleString('en', { month: 'short' }) : ''}</div>
         </div>
         <div class="upcoming-info">
-          <div class="upcoming-venue">${venue ? getVenueDisplayName(venue) : '—'}</div>
-          <div class="upcoming-time">${slot ? `${formatTime(slot.StartTime)} – ${formatTime(slot.EndTime)}` : '—'}</div>
+          <div class="upcoming-venue">${venue ? getVenueDisplayName(venue) : (b.venueName || '—')}</div>
+          <div class="upcoming-time">${timeDisplay}</div>
         </div>
         ${statusBadge(b.B_Status)}
       </div>`;

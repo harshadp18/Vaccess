@@ -162,6 +162,13 @@ document.addEventListener('DOMContentLoaded', () => {
   renderStats();
   renderBookings();
 
+  if (window.vAccessAPI) {
+    window.vAccessAPI.getMyBookings().then(() => {
+      renderStats();
+      renderBookings();
+    }).catch(e => console.warn('Sync my bookings failed:', e.message));
+  }
+
   el('mb-search').addEventListener('input', debounce(renderBookings, 250));
   el('mb-status').addEventListener('change', renderBookings);
   el('mb-clear-btn').addEventListener('click', () => {
@@ -194,13 +201,14 @@ function renderBookings() {
   if (search) {
     const t = search.toLowerCase();
     bookings = bookings.filter(b => {
-      const venue = getVenueById(b.V_ID);
+      const venue = b.venue || getVenueById(b.V_ID);
+      const vName = venue ? getVenueDisplayName(venue) : (b.venueName || '');
       return b.B_ID.toLowerCase().includes(t) ||
-        b.Purpose.toLowerCase().includes(t) ||
-        (venue && getVenueDisplayName(venue).toLowerCase().includes(t));
+        (b.Purpose && b.Purpose.toLowerCase().includes(t)) ||
+        vName.toLowerCase().includes(t);
     });
   }
-  if (status) bookings = bookings.filter(b => b.B_Status === status);
+  if (status) bookings = bookings.filter(b => String(b.B_Status).toLowerCase() === status.toLowerCase());
 
   el('mb-count').textContent = bookings.length;
   const emptyEl = el('mb-empty');
@@ -215,18 +223,20 @@ function renderBookings() {
 
   // Desktop table
   el('mb-tbody').innerHTML = bookings.map(b => {
-    const venue = getVenueById(b.V_ID);
-    const slots = getTimeslotsForBooking(b.B_ID);
+    const venue = b.venue || getVenueById(b.V_ID);
+    const slots = (b.slots && b.slots.length) ? b.slots : getTimeslotsForBooking(b.B_ID);
     const slot  = slots[0];
-    const canCancel = b.B_Status === 'Pending';
+    const eventDateFormatted = slot ? formatDate(slot.EventDate) : (b.eventDate ? formatDate(b.eventDate) : '—');
+    const timeFormatted = slot ? `${formatTime(slot.StartTime)} – ${formatTime(slot.EndTime)}` : (b.timeRange || '—');
+    const canCancel = String(b.B_Status).toLowerCase() === 'pending';
     return `
       <tr>
         <td><a href="booking-details.html?id=${b.B_ID}" style="font-weight:700;color:var(--color-primary);">${b.B_ID}</a></td>
-        <td>${venue ? getVenueDisplayName(venue) : '—'}</td>
-        <td>${slot ? formatDate(slot.EventDate) : '—'}</td>
-        <td>${slot ? `${formatTime(slot.StartTime)} – ${formatTime(slot.EndTime)}` : '—'}</td>
-        <td style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${b.Purpose}">${b.Purpose}</td>
-        <td>👥 ${b.noOfMembers}</td>
+        <td>${venue ? getVenueDisplayName(venue) : (b.venueName || '—')}</td>
+        <td>${eventDateFormatted}</td>
+        <td>${timeFormatted}</td>
+        <td style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${escapeHtml(b.Purpose || '')}">${escapeHtml(b.Purpose || '—')}</td>
+        <td>👥 ${b.noOfMembers || 1}</td>
         <td>${statusBadge(b.B_Status)}</td>
         <td>
           <div class="table-actions">
@@ -239,25 +249,27 @@ function renderBookings() {
 
   // Mobile cards
   el('mb-mobile-cards').innerHTML = bookings.map(b => {
-    const venue = getVenueById(b.V_ID);
-    const slots = getTimeslotsForBooking(b.B_ID);
+    const venue = b.venue || getVenueById(b.V_ID);
+    const slots = (b.slots && b.slots.length) ? b.slots : getTimeslotsForBooking(b.B_ID);
     const slot  = slots[0];
-    const canCancel = b.B_Status === 'Pending';
+    const eventDateFormatted = slot ? formatDate(slot.EventDate) : (b.eventDate ? formatDate(b.eventDate) : '—');
+    const timeFormatted = slot ? `${formatTime(slot.StartTime)} – ${formatTime(slot.EndTime)}` : (b.timeRange || '—');
+    const canCancel = String(b.B_Status).toLowerCase() === 'pending';
     return `
       <div class="booking-card">
         <div class="booking-card-header">
           <div>
             <div class="booking-card-id">${b.B_ID}</div>
-            <div class="booking-card-venue">${venue ? getVenueDisplayName(venue) : '—'}</div>
+            <div class="booking-card-venue">${venue ? getVenueDisplayName(venue) : (b.venueName || '—')}</div>
           </div>
           ${statusBadge(b.B_Status)}
         </div>
         <div class="booking-card-meta">
-          <span>📅 ${slot ? formatDate(slot.EventDate) : '—'}</span>
-          <span>🕐 ${slot ? `${formatTime(slot.StartTime)} – ${formatTime(slot.EndTime)}` : '—'}</span>
-          <span>👥 ${b.noOfMembers}</span>
+          <span>📅 ${eventDateFormatted}</span>
+          <span>🕐 ${timeFormatted}</span>
+          <span>👥 ${b.noOfMembers || 1}</span>
         </div>
-        <div style="font-size:var(--font-size-xs);color:var(--color-text-muted);">📌 ${b.Purpose}</div>
+        <div style="font-size:var(--font-size-xs);color:var(--color-text-muted);">📌 ${escapeHtml(b.Purpose || '')}</div>
         <div class="booking-card-actions">
           <a href="booking-details.html?id=${b.B_ID}" class="btn btn-sm btn-secondary" style="flex:1;justify-content:center;">View Details</a>
           ${canCancel ? `<button class="btn btn-sm btn-danger-outline" onclick="handleCancel('${b.B_ID}')" style="flex:1;justify-content:center;">Cancel</button>` : ''}

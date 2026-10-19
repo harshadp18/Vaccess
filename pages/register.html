@@ -120,6 +120,7 @@
   </div>
 </div>
 
+<script src="../config.js"></script>
 <script src="../js/mock-data.js"></script>
 <script src="../js/utils.js"></script>
 <script src="../js/api.js"></script>
@@ -168,45 +169,66 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Form submit
-  el('register-form').addEventListener('submit', (e) => {
+ el('register-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     hideRegError();
 
-    const name      = el('reg-name').value.trim();
-    const email     = el('reg-email').value.trim();
+    const name = el('reg-name').value.trim();
+    const email = el('reg-email').value.trim();
     const contactNo = el('reg-contact').value.trim();
-    const dept      = el('reg-dept').value;
-    const password  = el('reg-password').value;
-    const role      = document.querySelector('input[name="reg-role"]:checked')?.value;
+    const dept = el('reg-dept').value;
+    const password = el('reg-password').value;
+    const role = document.querySelector('input[name="reg-role"]:checked')?.value;
 
     if (!name || !email || !password || !role) {
-      showRegError('Please fill in all required fields.');
-      return;
+        showRegError('Please fill in all required fields.');
+        return;
     }
+
     if (role !== 'admin' && !dept) {
-      showRegError('Please select your department.');
-      return;
+        showRegError('Please select your department.');
+        return;
     }
+
     if (password.length < 4) {
-      showRegError('Password must be at least 4 characters long.');
-      return;
+        showRegError('Password must be at least 4 characters long.');
+        return;
     }
 
     const btn = el('reg-submit-btn');
     btn.textContent = 'Creating account...';
     btn.disabled = true;
 
-    setTimeout(() => {
-      const result = mockRegister({ name, email, contactNo, dept, role, password });
-      if (result.success) {
-        window.location.href = role === 'admin' ? 'admin-dashboard.html' : 'student-dashboard.html';
-      } else {
-        showRegError(result.error);
+    try {
+        if (role === 'admin') {
+            showRegError('Admin accounts cannot be created through registration. Please use an existing admin account.');
+            return;
+        }
+
+        const result = await vAccessAPI.register({
+            name,
+            email,
+            contactNo,
+            dept,
+            password,
+            role
+        });
+
+        if (result.success) {
+            showRegError('Registration successful! Please log in with your new account.');
+            btn.textContent = 'Account Created';
+        } else {
+            showRegError(result.error || 'Registration failed.');
+            btn.textContent = 'Create Account →';
+            btn.disabled = false;
+        }
+    } catch (err) {
+        console.error('Registration failed:', err);
+        showRegError('Unable to register. Please check that the backend is running.');
         btn.textContent = 'Create Account →';
         btn.disabled = false;
-      }
-    }, 200);
-  });
+    }
+});
 
   function showRegError(msg) {
     const errEl = el('reg-error');
